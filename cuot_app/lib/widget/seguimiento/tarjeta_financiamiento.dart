@@ -210,23 +210,24 @@ class _TarjetaFinanciamientoState extends State<TarjetaFinanciamiento> {
                           '$_cuotasPagadasCount',
                           AppColors.success,
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 8),
                         _buildMiniEstadistica(
                           'Pendientes',
                           '$_cuotasPendientesCount',
                           AppColors.warning,
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 8),
                         _buildMiniEstadistica(
                           'Vencidas',
                           '${widget.cuotasVencidas}',
                           AppColors.error,
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 8),
                         _buildMiniEstadistica(
                           'Monto Total',
                           '\$${widget.totalCredito.toStringAsFixed(2)}',
                           AppColors.primaryGreen,
+                          isProminent: true,
                         ),
                       ],
                     ),
@@ -384,13 +385,15 @@ class _TarjetaFinanciamientoState extends State<TarjetaFinanciamiento> {
     );
   }
 
-  Widget _buildMiniEstadistica(String label, String valor, Color color) {
+  Widget _buildMiniEstadistica(String label, String valor, Color color, {bool isProminent = false}) {
     return Expanded(
+      flex: isProminent ? 2 : 1,
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 8,
-            height: 8,
+            width: isProminent ? 10 : 8,
+            height: isProminent ? 10 : 8,
             decoration: BoxDecoration(
               color: color,
               shape: BoxShape.circle,
@@ -398,16 +401,28 @@ class _TarjetaFinanciamientoState extends State<TarjetaFinanciamiento> {
           ),
           const SizedBox(width: 4),
           Flexible(
-            child: Text(
-              '$valor $label',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey.shade700,
-                fontWeight: label == 'Vencidas' && int.parse(valor) > 0
-                    ? FontWeight.bold
-                    : FontWeight.normal,
-              ),
-              overflow: TextOverflow.ellipsis,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  valor,
+                  style: TextStyle(
+                    fontSize: isProminent ? 14 : 12,
+                    color: Colors.grey.shade800,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: isProminent ? 11 : 10,
+                    color: Colors.grey.shade600,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
           ),
         ],

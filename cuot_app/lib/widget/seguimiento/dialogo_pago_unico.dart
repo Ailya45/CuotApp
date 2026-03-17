@@ -23,6 +23,7 @@ class DialogoPagoUnico extends StatefulWidget {
 class _DialogoPagoUnicoState extends State<DialogoPagoUnico> 
     with SingleTickerProviderStateMixin {
   late TextEditingController _montoController;
+  late TextEditingController _tasaController; // 👈 NUEVO
   late TextEditingController _referenciaController;
   late TextEditingController _observacionesController;
   String _metodoPago = 'efectivo';
@@ -49,6 +50,7 @@ class _DialogoPagoUnicoState extends State<DialogoPagoUnico>
           ? (_maxMonto / 2).toStringAsFixed(2)
           : _maxMonto.toStringAsFixed(2),
     );
+    _tasaController = TextEditingController(); // 👈 NUEVO
     _referenciaController = TextEditingController();
     _observacionesController = TextEditingController();
     
@@ -66,6 +68,7 @@ class _DialogoPagoUnicoState extends State<DialogoPagoUnico>
   @override
   void dispose() {
     _montoController.dispose();
+    _tasaController.dispose(); // 👈 NUEVO
     _referenciaController.dispose();
     _observacionesController.dispose();
     _animationController.dispose();
@@ -257,6 +260,70 @@ class _DialogoPagoUnicoState extends State<DialogoPagoUnico>
                         ),
                         keyboardType: TextInputType.number,
                         enabled: widget.esParcial,
+                        onChanged: (value) => setState(() {}), // Actualizar Bs.
+                      ),
+                      
+                      const SizedBox(height: 16),
+
+                      // 👈 NUEVO: Tasa de cambio y Monto en Bs.
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            flex: 2,
+                            child: TextFormField(
+                              controller: _tasaController,
+                              decoration: InputDecoration(
+                                labelText: 'Tasa del día (BCV)',
+                                prefixText: 'Bs. ',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                filled: true,
+                                fillColor: Colors.grey.shade50,
+                              ),
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              onChanged: (value) => setState(() {}),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 3,
+                            child: Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryGreen.withOpacity(0.05),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: AppColors.primaryGreen.withOpacity(0.2),
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  const Text(
+                                    'Equivalente en Bolívares',
+                                    style: TextStyle(fontSize: 10, color: Colors.grey),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    () {
+                                      final montoUsd = double.tryParse(_montoController.text) ?? 0.0;
+                                      final tasa = double.tryParse(_tasaController.text) ?? 0.0;
+                                      final totalBs = montoUsd * tasa;
+                                      return 'Bs. ${totalBs.toStringAsFixed(2)}';
+                                    }(),
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.primaryGreen,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                       
                       if (widget.esParcial) ...[

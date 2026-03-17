@@ -29,6 +29,7 @@ class _FormularioPagounicoState extends State<FormularioPagounico> {
   final _inversionController = TextEditingController();
   final _gananciaController = TextEditingController();
   final _clienteController = TextEditingController();
+  final _telefonoController = TextEditingController();
   
   // Variables de estado
   DateTime _fechaInicio = DateTime.now();
@@ -231,6 +232,19 @@ class _FormularioPagounicoState extends State<FormularioPagounico> {
               validator: (v) => Validators.required(v, 'Cliente'),
               onChanged: _actualizarCredito,
             ),
+            const SizedBox(height: 20),
+            _buildSeccionTitulo('Teléfono', Icons.phone),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _telefonoController,
+              decoration: _buildInputDecoration(
+                label: 'Número de teléfono cliente',
+                icon: Icons.phone_android,
+                prefix: '+',
+              ),
+              keyboardType: TextInputType.phone,
+              onChanged: _actualizarCredito,
+            ),
 
              const SizedBox(height: 20),
             
@@ -393,6 +407,7 @@ class _FormularioPagounicoState extends State<FormularioPagounico> {
         fechaInicio: _fechaInicio,
         modalidadPago: ModalidadPago.mensual,
         nombreCliente: _clienteController.text,
+        telefono: _telefonoController.text,
         numeroCuotas: 1,
         facturaPath: _facturaSeleccionada?.path,
         nombreFactura: _facturaSeleccionada?.path.split('/').last,
@@ -531,6 +546,7 @@ class _FormularioPagounicoState extends State<FormularioPagounico> {
     _inversionController.dispose();
     _gananciaController.dispose();
     _clienteController.dispose();
+    _telefonoController.dispose();
     super.dispose();
   }
 }

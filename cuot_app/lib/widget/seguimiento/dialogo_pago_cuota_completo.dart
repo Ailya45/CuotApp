@@ -50,6 +50,7 @@ class _DialogoPagoCuotaCompletoState extends State<DialogoPagoCuotaCompleto>
     with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _montoController;
+  late TextEditingController _tasaController; // 👈 NUEVO
   late TextEditingController _referenciaController;
   late TextEditingController _observacionesController;
   
@@ -164,6 +165,7 @@ class _DialogoPagoCuotaCompletoState extends State<DialogoPagoCuotaCompleto>
     _montoController = TextEditingController(
       text: widget.montoRestante.toStringAsFixed(2), // 👈 Usar montoRestante
     );
+    _tasaController = TextEditingController(); // 👈 NUEVO
     _referenciaController = TextEditingController();
     _observacionesController = TextEditingController();
     
@@ -181,6 +183,7 @@ class _DialogoPagoCuotaCompletoState extends State<DialogoPagoCuotaCompleto>
   @override
   void dispose() {
     _montoController.dispose();
+    _tasaController.dispose(); // 👈 NUEVO
     _referenciaController.dispose();
     _observacionesController.dispose();
     _animationController.dispose();
@@ -592,7 +595,9 @@ class _DialogoPagoCuotaCompletoState extends State<DialogoPagoCuotaCompleto>
                                 : null,
                           ),
                           keyboardType: TextInputType.number,
-                          style: const TextStyle(fontSize: 16),
+                          onChanged: (value) {
+                            setState(() {}); // Forzar reconstrucción para actualizar Bs.
+                          },
                           validator: (value) {
                             if (value == null || value.isEmpty) {
                               return 'Ingresa el monto';
@@ -609,6 +614,71 @@ class _DialogoPagoCuotaCompletoState extends State<DialogoPagoCuotaCompleto>
                             }
                             return null;
                           },
+                        ),
+                        
+                        const SizedBox(height: 16),
+                        
+                        // 👈 NUEVO: Tasa de cambio y Monto en Bs.
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              flex: 2,
+                              child: TextFormField(
+                                controller: _tasaController,
+                                decoration: InputDecoration(
+                                  labelText: 'Tasa del día (BCV)',
+                                  prefixText: 'Bs. ',
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.grey.shade50,
+                                ),
+                                keyboardType: TextInputType.numberWithOptions(decimal: true),
+                                onChanged: (value) {
+                                  setState(() {}); // Actualizar vista al cambiar tasa
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              flex: 3,
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primaryGreen.withOpacity(0.05),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: AppColors.primaryGreen.withOpacity(0.2),
+                                  ),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    const Text(
+                                      'Equivalente en Bolívares',
+                                      style: TextStyle(fontSize: 10, color: Colors.grey),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      () {
+                                        final montoUsd = double.tryParse(_montoController.text) ?? 0.0;
+                                        final tasa = double.tryParse(_tasaController.text) ?? 0.0;
+                                        final totalBs = montoUsd * tasa;
+                                        return 'Bs. ${totalBs.toStringAsFixed(2)}';
+                                      }(),
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.primaryGreen,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                         
                         // 👇 NUEVO: Mostrar cuánto quedará pendiente después del pago parcial

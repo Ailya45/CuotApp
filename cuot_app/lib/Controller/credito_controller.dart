@@ -51,9 +51,18 @@ class CreditoController extends ChangeNotifier {
       String clienteId;
       if (clientes.isNotEmpty) {
         clienteId = clientes[0]['id'];
+        // Opcional: actualizar teléfono si cambió
+        if (credito.telefono != null && credito.telefono!.isNotEmpty) {
+          await _supabaseService.client
+              .schema('Financiamientos')
+              .from('Clientes')
+              .update({'telefono': credito.telefono})
+              .eq('id', clienteId);
+        }
       } else {
         final nuevoCliente = await _supabaseService.insert('Clientes', {
           'nombre': credito.nombreCliente,
+          'telefono': credito.telefono,
           'usuario_creador': usuarioNombre,
         });
         clienteId = nuevoCliente['id'];

@@ -1,6 +1,16 @@
 import 'package:intl/intl.dart';
 
 class Formatters {
+  // 🔧 LÓGICA: Formatear bolívares
+  static String formatBolivares(double value) {
+    final formatter = NumberFormat.currency(
+      locale: 'es_VE',
+      symbol: 'Bs.',
+      decimalDigits: 2,
+    );
+    return formatter.format(value);
+  }
+
   // 🔧 LÓGICA: Formatear moneda
   static String formatCurrency(double value) {
     final formatter = NumberFormat.currency(

@@ -17,6 +17,7 @@ class Credito {
   // 📌 CAMPOS OPCIONALES
   final String? facturaPath;
   final String? nombreFactura;
+  final String? telefono;
   final DateTime? fechaLimite; // Solo para pago único
 
   String? id;
@@ -27,7 +28,7 @@ class Credito {
   double get precioTotal => costeInversion + margenGanancia;
   double get valorCuota {
     if (numeroCuotas == null || numeroCuotas == 0) return 0;
-    return precioTotal / numeroCuotas!;
+    return precioTotal / numeroCuotas;
   }
   
   // 📌 NUEVO: Lista de fechas personalizadas para cada cuota
@@ -40,6 +41,7 @@ class Credito {
     required this.modalidadPago,
     required this.nombreCliente,
     required this.numeroCuotas,
+    this.telefono,
     this.facturaPath,
     this.nombreFactura,
     this.fechasPersonalizadas,
@@ -84,6 +86,7 @@ class Credito {
     'fechaInicio': fechaInicio.toIso8601String(),
     'modalidadPago': modalidadPago.index,
     'nombreCliente': nombreCliente,
+    'telefono': telefono,
     'numeroCuotas': numeroCuotas,
     'facturaPath': facturaPath,
     'nombreFactura': nombreFactura,
@@ -100,6 +103,7 @@ class Credito {
       fechaInicio: DateTime.parse(json['fechaInicio']),
       modalidadPago: ModalidadPago.values[json['modalidadPago']],
       nombreCliente: json['nombreCliente'],
+      telefono: json['telefono'],
       numeroCuotas: json['numeroCuotas'],
       facturaPath: json['facturaPath'],
       fechaLimite: json['fechaLimite'] != null ? DateTime.parse(json['fechaLimite']) : null,

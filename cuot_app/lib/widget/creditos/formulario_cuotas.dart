@@ -34,6 +34,7 @@ class _FormularioCuotasState extends State<FormularioCuotas> {
   final _gananciaController = TextEditingController();
   final _cuotasController = TextEditingController();
   final _clienteController = TextEditingController();
+  final _telefonoController = TextEditingController();
 
   // 📌 VARIABLES DE ESTADO
   DateTime _fechaInicio = DateTime.now();
@@ -353,6 +354,19 @@ class _FormularioCuotasState extends State<FormularioCuotas> {
               onChanged: _actualizarCredito,
             ),
             const SizedBox(height: 20),
+            _buildSeccionTitulo('Teléfono', Icons.phone),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _telefonoController,
+              decoration: _buildInputDecoration(
+                label: 'Número de teléfono cliente',
+                icon: Icons.phone_android,
+                prefix: '+',
+              ),
+              keyboardType: TextInputType.phone,
+              onChanged: _actualizarCredito,
+            ),
+            const SizedBox(height: 20),
             
             // 📌 8. FACTURA (OPCIONAL)
             _buildSeccionTitulo('Factura (Opcional)', Icons.receipt),
@@ -653,6 +667,7 @@ class _FormularioCuotasState extends State<FormularioCuotas> {
         fechaInicio: _fechaInicio,
         modalidadPago: _modalidadSeleccionada,
         nombreCliente: _clienteController.text,
+        telefono: _telefonoController.text,
         numeroCuotas: _numCuotas,
         facturaPath: _facturaSeleccionada?.path,
         nombreFactura: _facturaSeleccionada?.path.split('/').last,
@@ -860,6 +875,7 @@ class _FormularioCuotasState extends State<FormularioCuotas> {
     _gananciaController.dispose();
     _cuotasController.dispose();
     _clienteController.dispose();
+    _telefonoController.dispose();
     super.dispose();
   }
-}
+}
