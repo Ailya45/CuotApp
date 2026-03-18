@@ -176,6 +176,29 @@ class CreditService {
     }
   }
 
+  // 🚀 OPTIMIZADO: Obtener TODO en una sola consulta (Créditos + Clientes + Cuotas + Pagos)
+  // Esto resuelve el problema N+1 y reduce drásticamente el tiempo de carga.
+  Future<List<Map<String, dynamic>>> getFullCreditsData(String usuarioNombre) async {
+    try {
+      final response = await _supabase.client
+          .schema('Financiamientos')
+          .from('Creditos')
+          .select('''
+            *,
+            Clientes(*),
+            Cuotas(*),
+            Pagos(*)
+          ''')
+          .eq('usuario_nombre', usuarioNombre)
+          .order('id', ascending: false); // Ver más recientes primero
+      
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      print('Error en getFullCreditsData: $e');
+      return [];
+    }
+  }
+
   // Obtener cuotas de un crédito específico
   Future<List<Map<String, dynamic>>> getInstallments(String creditId) async {
     try {

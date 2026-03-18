@@ -1,5 +1,6 @@
 // lib/widget/seguimiento/dialogo_pago_unico.dart
 import 'package:flutter/material.dart';
+import 'package:cuot_app/utils/scrapper_util.dart'; // 👈 NUEVO: Scrapper
 import 'package:cuot_app/Model/credito_unico_model.dart';
 import 'package:cuot_app/Model/pago_model.dart';
 import 'package:cuot_app/theme/app_colors.dart';
@@ -28,6 +29,7 @@ class _DialogoPagoUnicoState extends State<DialogoPagoUnico>
   late TextEditingController _observacionesController;
   String _metodoPago = 'efectivo';
   DateTime _fechaPago = DateTime.now();
+  bool _isLoadingTasa = false; // 👈 NUEVO: Estado de carga
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
 
@@ -63,6 +65,23 @@ class _DialogoPagoUnicoState extends State<DialogoPagoUnico>
       curve: Curves.elasticOut,
     );
     _animationController.forward();
+    
+    // 👈 NUEVO: Intentar cargar la tasa automáticamente
+    _cargarTasaBcv();
+  }
+
+  // 👈 NUEVO: Método para cargar la tasa del BCV
+  Future<void> _cargarTasaBcv() async {
+    setState(() => _isLoadingTasa = true);
+    final tasa = await ScrapperUtil.getDolarBcv();
+    if (mounted && tasa != null) {
+      setState(() {
+        _tasaController.text = tasa.toStringAsFixed(2);
+        _isLoadingTasa = false;
+      });
+    } else if (mounted) {
+      setState(() => _isLoadingTasa = false);
+    }
   }
 
   @override
@@ -265,66 +284,88 @@ class _DialogoPagoUnicoState extends State<DialogoPagoUnico>
                       
                       const SizedBox(height: 16),
 
-                      // 👈 NUEVO: Tasa de cambio y Monto en Bs.
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            flex: 2,
-                            child: TextFormField(
-                              controller: _tasaController,
-                              decoration: InputDecoration(
-                                labelText: 'Tasa del día (BCV)',
-                                prefixText: 'Bs. ',
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                filled: true,
-                                fillColor: Colors.grey.shade50,
+                    // 👈 NUEVO: Tasa de cambio y Monto en Bs. (LAYOUT MEJORADO A FULL WIDTH)
+                    TextFormField(
+                      controller: _tasaController,
+                      readOnly: true,
+                      style: const TextStyle(
+                        fontSize: 22, // 👈 Más grande
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue,
+                        letterSpacing: 1.2,
+                      ),
+                      decoration: InputDecoration(
+                        labelText: 'Tasa del día (BCV)',
+                        prefixText: 'Bs. ',
+                        prefixStyle: const TextStyle(fontSize: 18, color: Colors.blue),
+                        suffixIcon: _isLoadingTasa 
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: Padding(
+                                padding: EdgeInsets.all(12),
+                                child: CircularProgressIndicator(strokeWidth: 2.5),
                               ),
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                              onChanged: (value) => setState(() {}),
+                            )
+                          : IconButton(
+                              icon: const Icon(Icons.refresh, size: 28),
+                              onPressed: _cargarTasaBcv,
+                              tooltip: 'Refrescar tasa BCV',
+                            ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        filled: true,
+                        fillColor: Colors.blue.withOpacity(0.05),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Equivalente en Bolívares (Full width - FIX OVERFLOW)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryGreen.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: AppColors.primaryGreen.withOpacity(0.2),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          const Text(
+                            'EQUIVALENTE EN BOLÍVARES',
+                            style: TextStyle(
+                              fontSize: 10, 
+                              color: Colors.grey,
+                              letterSpacing: 1.1,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            flex: 3,
-                            child: Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: AppColors.primaryGreen.withOpacity(0.05),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: AppColors.primaryGreen.withOpacity(0.2),
-                                ),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  const Text(
-                                    'Equivalente en Bolívares',
-                                    style: TextStyle(fontSize: 10, color: Colors.grey),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    () {
-                                      final montoUsd = double.tryParse(_montoController.text) ?? 0.0;
-                                      final tasa = double.tryParse(_tasaController.text) ?? 0.0;
-                                      final totalBs = montoUsd * tasa;
-                                      return 'Bs. ${totalBs.toStringAsFixed(2)}';
-                                    }(),
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.primaryGreen,
-                                    ),
-                                  ),
-                                ],
+                          const SizedBox(height: 4),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              () {
+                                final montoUsd = double.tryParse(_montoController.text) ?? 0.0;
+                                final tasa = double.tryParse(_tasaController.text) ?? 0.0;
+                                final totalBs = montoUsd * tasa;
+                                return 'Bs. ${totalBs.toStringAsFixed(2)}';
+                              }(),
+                              style: TextStyle(
+                                fontSize: 28, // 👈 Se mantiene grande pero escala si es necesario
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primaryGreen,
                               ),
                             ),
                           ),
                         ],
                       ),
+                    ),
                       
                       if (widget.esParcial) ...[
                         const SizedBox(height: 8),
@@ -489,6 +530,71 @@ class _DialogoPagoUnicoState extends State<DialogoPagoUnico>
                         ),
                       ),
                       
+                      const SizedBox(height: 24),
+                      
+                      // 👈 INTEGRADO: Resumen final de pago (ESTILO REUTILIZADO)
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryGreen.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: AppColors.primaryGreen.withOpacity(0.2),
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'Total a pagar:',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                Text(
+                                  '\$${(double.tryParse(_montoController.text) ?? 0.0).toStringAsFixed(2)}',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.success,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'Total en Bolívares:',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(
+                                    () {
+                                      final montoUsd = double.tryParse(_montoController.text) ?? 0.0;
+                                      final tasa = double.tryParse(_tasaController.text) ?? 0.0;
+                                      return 'Bs. ${(montoUsd * tasa).toStringAsFixed(2)}';
+                                    }(),
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.primaryGreen,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+
                       const SizedBox(height: 24),
                       
                       // Botones

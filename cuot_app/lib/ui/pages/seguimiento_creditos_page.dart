@@ -30,7 +30,8 @@ class _SeguimientoCreditosPageState extends State<SeguimientoCreditosPage> {
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
-      final rawCredits = await _creditService.getCreditsWithClients(widget.nombreUsuario);
+      // 🚀 OPTIMIZACIÓN: Una sola consulta para traer todo (N+1 fixed)
+      final rawCredits = await _creditService.getFullCreditsData(widget.nombreUsuario);
       
       final List<dynamic> processedCredits = [];
       
@@ -39,9 +40,9 @@ class _SeguimientoCreditosPageState extends State<SeguimientoCreditosPage> {
         final creditId = c['id'].toString();
         final bool esPagoUnico = c['tipo_credito'] == 'unico';
         
-        // Cargar cuotas y pagos para este crédito
-        final rawCuotas = await _creditService.getInstallments(creditId);
-        final rawPagos = await _creditService.getPayments(creditId);
+        // Extraer datos de la respuesta anidada (YA NO SON CONSULTAS APARTE)
+        final List<dynamic> rawCuotas = c['Cuotas'] ?? [];
+        final List<dynamic> rawPagos = c['Pagos'] ?? [];
         
         final List<CuotaPersonalizada> cuotas = rawCuotas.map((cq) => CuotaPersonalizada(
           numeroCuota: cq['numero_cuota'],
@@ -57,14 +58,14 @@ class _SeguimientoCreditosPageState extends State<SeguimientoCreditosPage> {
           id: p['id'].toString(),
           creditoId: creditId,
           numeroCuota: p['numero_cuota'],
-          fechaPago: DateTime.parse(p['fecha_pago_real']), // Simplificación
+          fechaPago: DateTime.parse(p['fecha_pago_real']), 
           monto: (p['monto'] as num).toDouble(),
           fechaPagoReal: DateTime.parse(p['fecha_pago_real']),
           estado: 'pagado',
           metodoPago: p['metodo_pago'] ?? 'efectivo',
         )).toList();
         
-        // Ordenar pagos por fecha de pago real (opcional pero recomendado)
+        // Ordenar pagos por fecha de pago real
         pagos.sort((a, b) => (a.fechaPagoReal ?? a.fechaPago).compareTo(b.fechaPagoReal ?? b.fechaPago));
 
         if (esPagoUnico) {
@@ -102,7 +103,7 @@ class _SeguimientoCreditosPageState extends State<SeguimientoCreditosPage> {
       });
       _actualizarEstados();
     } catch (e) {
-      print('Error cargando créditos: $e');
+      print(' Error cargando créditos optimizados: $e');
       setState(() => _isLoading = false);
     }
   }

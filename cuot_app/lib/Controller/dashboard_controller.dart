@@ -23,23 +23,20 @@ class DashboardController extends ChangeNotifier {
     loadDashboardData();
   }
 
-  // 🔴 MÉTODO PRINCIPAL: CARGA TODOS LOS DATOS DEL DASHBOARD
+  // 🔴 MÉTODO PRINCIPAL OPTIMIZADO: Carga todo en una sola consulta
   Future<void> loadDashboardData() async {
     isLoading = true;
     errorMessage = null;
     notifyListeners();
 
     try {
-      // Cargar todos los datos en paralelo para mejor rendimiento
-      await Future.wait([
-        _loadTotalCredits(),
-        _loadTotalPaid(),
-        _loadPendingWeeklyQuotas(),
-        _loadPendingBalance(),
-        _loadUpcomingPayments(),
-        _loadLatePayments(),
-      ]);
+      // 🚀 Una sola consulta para traer todo lo relacionado al usuario
+      final creditsData = await _creditService.getFullCreditsData(userName ?? '');
+      
+      _processData(creditsData);
+      
     } catch (e) {
+      print('Error en loadDashboardData: $e');
       errorMessage = 'Error al cargar datos: $e';
     } finally {
       isLoading = false;
@@ -47,32 +44,91 @@ class DashboardController extends ChangeNotifier {
     }
   }
 
-  // 🔴 IMPLEMENTA CADA MÉTODO CON SU LÓGICA ESPECÍFICA
-  
-  Future<void> _loadTotalCredits() async {
-    totalCredits = await _creditService.getTotalCredits(userName ?? '');
-  }
+  void _processData(List<Map<String, dynamic>> credits) {
+    final now = DateTime.now();
+    
+    // Configurar rangos de fechas (mismos que en CreditService original)
+    final inicioSemana = now.subtract(Duration(days: now.weekday - 1))
+        .copyWith(hour: 0, minute: 0, second: 0, millisecond: 0, microsecond: 0);
+    final finSemana = inicioSemana.add(const Duration(days: 7));
+    final sevenDaysLater = now.add(const Duration(days: 7));
+    final lateThreshold = now.subtract(const Duration(hours: 24));
 
-  Future<void> _loadTotalPaid() async {
-    totalPaid = await _creditService.getTotalPaidAmount(userName ?? '');
-  }
+    // Reiniciar contadores
+    totalCredits = 0;
+    totalPaid = 0.0;
+    pendingWeeklyQuotas = 0;
+    pendingBalance = 0.0;
+    upcomingPayments = [];
+    latePayments = [];
 
-  Future<void> _loadPendingWeeklyQuotas() async {
-    final weeklyData = await _creditService.getPendingInstallmentsByWeek(userName ?? '');
-    // Obtener cuotas de la semana actual
-    pendingWeeklyQuotas = weeklyData['actual'] ?? 0;
-  }
+    for (var credit in credits) {
+      // 1. Créditos activos
+      if (credit['estado'] != 'Pagado') {
+        totalCredits++;
+      }
 
-  Future<void> _loadPendingBalance() async {
-    pendingBalance = await _creditService.getTotalPendingAmount(userName ?? '');
-  }
+      final clienteData = credit['Clientes'];
+      final clienteNombre = clienteData != null ? clienteData['nombre'] : 'Cliente';
+      final concepto = credit['concepto'] ?? 'Crédito';
+      final creditId = credit['id'].toString();
 
-  Future<void> _loadUpcomingPayments() async {
-    upcomingPayments = await _creditService.getUpcomingPayments(userName ?? '');
-  }
+      // 2. Dinero abonado (sumar todos los pagos del crédito)
+      final List<dynamic> pagosRaw = credit['Pagos'] ?? [];
+      for (var p in pagosRaw) {
+        totalPaid += (p['monto'] as num).toDouble();
+      }
 
-  Future<void> _loadLatePayments() async {
-    latePayments = await _creditService.getLatePayments(userName ?? '');
+      // 3, 4, 5, 6. Analizar cuotas
+      final List<dynamic> cuotasRaw = credit['Cuotas'] ?? [];
+      for (var c in cuotasRaw) {
+        final double monto = (c['monto'] as num).toDouble();
+        final bool pagada = c['pagada'] ?? false;
+        final DateTime fechaPago = DateTime.parse(c['fecha_pago']);
+
+        if (!pagada) {
+          // 4. Saldo pendiente
+          pendingBalance += monto;
+
+          // 3. Cuotas de la semana actual
+          if (fechaPago.isAfter(inicioSemana) && fechaPago.isBefore(finSemana)) {
+            pendingWeeklyQuotas++;
+          }
+
+          // 5. Próximos vencimientos (next 7 days)
+          if (fechaPago.isAfter(now) && fechaPago.isBefore(sevenDaysLater)) {
+            upcomingPayments.add(PaymentModel(
+              id: c['id'].toString(),
+              creditId: creditId,
+              amount: monto,
+              date: fechaPago,
+              installmentNumber: c['numero_cuota'] as int,
+              status: 'pending',
+              clientName: clienteNombre,
+              concept: concepto,
+            ));
+          }
+
+          // 6. Cuotas atrasadas
+          if (fechaPago.isBefore(lateThreshold)) {
+            latePayments.add(PaymentModel(
+              id: c['id'].toString(),
+              creditId: creditId,
+              amount: monto,
+              date: fechaPago,
+              installmentNumber: c['numero_cuota'] as int,
+              status: 'late',
+              clientName: clienteNombre,
+              concept: concepto,
+            ));
+          }
+        }
+      }
+    }
+
+    // Ordenar listas por fecha
+    upcomingPayments.sort((a, b) => a.date.compareTo(b.date));
+    latePayments.sort((a, b) => a.date.compareTo(b.date));
   }
 
   // Método para refrescar manualmente
