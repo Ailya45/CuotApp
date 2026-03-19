@@ -3,7 +3,7 @@ import 'dart:io';
 
 class StorageService {
   final SupabaseClient _supabase = Supabase.instance.client;
-  final String bucketName = 'facturas';
+  final String bucketName = 'Documentos';
 
   // 🔧 LÓGICA: Subir factura a Supabase Storage
   Future<String?> subirFactura(File archivo, String nombreArchivo) async {

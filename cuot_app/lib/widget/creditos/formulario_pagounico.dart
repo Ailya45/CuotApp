@@ -6,6 +6,7 @@ import 'package:cuot_app/utils/validators.dart';
 import 'package:cuot_app/widget/creditos/custom_date_picker.dart';
 import 'package:cuot_app/widget/creditos/factura_uploader.dart';
 import 'package:cuot_app/utils/date_utils.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart'; // 👈 NUEVO
 
 class FormularioPagounico extends StatefulWidget {
   final Function(Credito) onCreditoActualizado;
@@ -35,6 +36,7 @@ class _FormularioPagounicoState extends State<FormularioPagounico> {
   DateTime _fechaInicio = DateTime.now();
   DateTime _fechaLimite = DateTime.now().add(const Duration(days: 30));
   File? _facturaSeleccionada;
+  bool _mostrarTelefono = false; // 👈 NUEVO: Estado del checkbox
   
   // Valores calculados
   double get _inversion => double.tryParse(_inversionController.text) ?? 0;
@@ -233,18 +235,42 @@ class _FormularioPagounicoState extends State<FormularioPagounico> {
               onChanged: _actualizarCredito,
             ),
             const SizedBox(height: 20),
-            _buildSeccionTitulo('Teléfono', Icons.phone),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: _telefonoController,
-              decoration: _buildInputDecoration(
-                label: 'Número de teléfono cliente',
-                icon: Icons.phone_android,
-                prefix: '+',
-              ),
-              keyboardType: TextInputType.phone,
-              onChanged: _actualizarCredito,
+            
+            // 📌 7.5 TELEFONO OPCIONAL
+            CheckboxListTile(
+              title: const Text('Agregar número de teléfono'),
+              value: _mostrarTelefono,
+              activeColor: Theme.of(context).primaryColor,
+              onChanged: (val) {
+                setState(() => _mostrarTelefono = val ?? false);
+                _actualizarCredito();
+              },
+              controlAffinity: ListTileControlAffinity.leading,
+              contentPadding: EdgeInsets.zero,
             ),
+
+            if (_mostrarTelefono) ...[
+              _buildSeccionTitulo('Teléfono', Icons.phone),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _telefonoController,
+                decoration: _buildInputDecoration(
+                  label: 'Número de WhatsApp',
+                  icon: Icons.phone_android,
+                  prefix: '+',
+                  suffixIcon: const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: FaIcon(
+                      FontAwesomeIcons.whatsapp,
+                      color: Colors.green,
+                      size: 20,
+                    ),
+                  ),
+                ),
+                keyboardType: TextInputType.phone,
+                onChanged: _actualizarCredito,
+              ),
+            ],
 
              const SizedBox(height: 20),
             
@@ -321,7 +347,7 @@ class _FormularioPagounicoState extends State<FormularioPagounico> {
             _buildInfoRow('Precio total:', '\$$_precioTotal'),
             _buildInfoRow(
               'Duración:', 
-              '${DateUt.calcularDiferenciaMeses(_fechaInicio, _fechaLimite)} meses'
+              DateUt.formatearDuracion(_fechaInicio, _fechaLimite),
             ),
             const Divider(),
             Row(
@@ -407,7 +433,7 @@ class _FormularioPagounicoState extends State<FormularioPagounico> {
         fechaInicio: _fechaInicio,
         modalidadPago: ModalidadPago.mensual,
         nombreCliente: _clienteController.text,
-        telefono: _telefonoController.text,
+        telefono: _mostrarTelefono ? _telefonoController.text : '', // 👈 Condicional
         numeroCuotas: 1,
         facturaPath: _facturaSeleccionada?.path,
         nombreFactura: _facturaSeleccionada?.path.split('/').last,
@@ -503,11 +529,13 @@ class _FormularioPagounicoState extends State<FormularioPagounico> {
     required String label,
     IconData? icon,
     String? prefix,
+    Widget? suffixIcon,
   }) {
     return InputDecoration(
       labelText: label,
       prefixText: prefix,
       prefixIcon: icon != null ? Icon(icon, size: 20) : null,
+      suffixIcon: suffixIcon,
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       filled: true,
       fillColor: Colors.grey.shade50,

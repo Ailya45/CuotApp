@@ -7,12 +7,17 @@ class CreditSummaryCards extends StatelessWidget {
   final int pendingWeeklyQuotas;    // 3. Cuotas pendientes por semana
   final double pendingBalance;      // 4. Saldo de Cuotas Pendiente
 
+  final VoidCallback? onTapActiveCredits; // 👈 NUEVO: Callback para navegación
+  final VoidCallback? onTapPendingBalance; // 👈 NUEVO: Opcional para el futuro
+
   const CreditSummaryCards({
     super.key,
     required this.totalCredits,
     required this.totalPaid,
     required this.pendingWeeklyQuotas,
     required this.pendingBalance,
+    this.onTapActiveCredits,
+    this.onTapPendingBalance,
   });
 
   @override
@@ -30,6 +35,7 @@ class CreditSummaryCards extends StatelessWidget {
           value: totalCredits.toString(),
           icon: Icons.credit_card,
           color: AppColors.primaryGreen,
+          onTap: onTapActiveCredits, // 👈 ASIGNADO
         ),
         _buildSummaryCard(
           title: 'Total Abonado',
@@ -58,10 +64,14 @@ class CreditSummaryCards extends StatelessWidget {
     required String value,
     required IconData icon,
     required Color color,
+    VoidCallback? onTap, // 👈 AGREGADO
   }) {
     return Card(
       elevation: 2,
-      child: Container(
+      clipBehavior: Clip.antiAlias, // Para que el ripple del InkWell respete el borde del Card
+      child: InkWell( // 👈 AGREGADO para interactividad
+        onTap: onTap,
+        child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -109,6 +119,7 @@ class CreditSummaryCards extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

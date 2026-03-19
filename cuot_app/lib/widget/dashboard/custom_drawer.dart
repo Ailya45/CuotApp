@@ -27,7 +27,8 @@ class CustomDrawer extends StatelessWidget {
             // Header del Drawer con gradiente verde
             Container(
               padding: EdgeInsets.only(
-                top: MediaQuery.of(context).padding.top + 16, // Espacio para el status bar
+                top: MediaQuery.of(context).padding.top +
+                    16, // Espacio para el status bar
                 left: 16,
                 right: 16,
                 bottom: 16,
@@ -57,8 +58,8 @@ class CustomDrawer extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    nombre_usuario.isNotEmpty 
-                        ? 'Hola, $nombre_usuario' 
+                    nombre_usuario.isNotEmpty
+                        ? 'Hola, ${nombre_usuario.split(' ').first}'
                         : 'Hola, Usuario',
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -88,12 +89,16 @@ class CustomDrawer extends StatelessWidget {
                 Navigator.pop(context); // Cerrar el drawer primero
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => DashboardScreen(correo: '', userName: nombre_usuario,)),
+                  MaterialPageRoute(
+                      builder: (_) => DashboardScreen(
+                            correo: '',
+                            userName: nombre_usuario,
+                          )),
                 );
               },
               isSelected: ventanaActiva == 'dashboard', // 👈 Condición
             ),
-            
+
             _buildDrawerItem(
               icon: Icons.credit_card,
               label: 'Cuotas Personales',
@@ -101,23 +106,25 @@ class CustomDrawer extends StatelessWidget {
                 Navigator.pop(context); // Cerrar el drawer primero
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => SeguimientoCreditosPage(nombreUsuario: nombre_usuario,)),
+                  MaterialPageRoute(
+                      builder: (_) => SeguimientoCreditosPage(
+                            nombreUsuario: nombre_usuario,
+                          )),
                 );
               },
               isSelected: ventanaActiva == 'Cuotas Personales', // 👈 Condición
             ),
-            
+
             _buildDrawerItem(
               icon: Icons.payment,
               label: 'Cuotas Comunitarias',
               onTap: () {
-                
-               
                 // TODO: Implementar navegación a pagos
               },
-              isSelected: ventanaActiva == 'Cuotas Comunitarias', // 👈 Condición
+              isSelected:
+                  ventanaActiva == 'Cuotas Comunitarias', // 👈 Condición
             ),
-            
+
             _buildDrawerItem(
               icon: Icons.calendar_today,
               label: 'Cuotas Empresariales',
@@ -125,9 +132,10 @@ class CustomDrawer extends StatelessWidget {
                 Navigator.pop(context);
                 // TODO: Implementar navegación a calendario
               },
-              isSelected: ventanaActiva == 'Cuotas Empresariales', // 👈 Condición
+              isSelected:
+                  ventanaActiva == 'Cuotas Empresariales', // 👈 Condición
             ),
-            
+
             _buildDrawerItem(
               icon: Icons.history,
               label: 'Historial',
@@ -137,14 +145,14 @@ class CustomDrawer extends StatelessWidget {
               },
               isSelected: ventanaActiva == 'historial', // 👈 Condición
             ),
-            
+
             const Divider(
               height: 32,
               thickness: 1,
               indent: 16,
               endIndent: 16,
             ),
-            
+
             _buildDrawerItem(
               icon: Icons.notifications_outlined,
               label: 'Notificaciones',
@@ -156,7 +164,7 @@ class CustomDrawer extends StatelessWidget {
               badgeCount: 3,
               isSelected: ventanaActiva == 'notificaciones', // 👈 Condición
             ),
-            
+
             _buildDrawerItem(
               icon: Icons.settings,
               label: 'Configuración',
@@ -172,7 +180,7 @@ class CustomDrawer extends StatelessWidget {
               },
               isSelected: ventanaActiva == 'Configuración', // 👈 Condición
             ),
-            
+
             _buildDrawerItem(
               icon: Icons.help_outline,
               label: 'Ayuda',
@@ -182,14 +190,14 @@ class CustomDrawer extends StatelessWidget {
               },
               isSelected: ventanaActiva == 'ayuda', // 👈 Condición
             ),
-            
+
             const Divider(
               height: 32,
               thickness: 1,
               indent: 16,
               endIndent: 16,
             ),
-            
+
             _buildDrawerItem(
               icon: Icons.logout,
               label: 'Cerrar Sesión',
@@ -202,9 +210,9 @@ class CustomDrawer extends StatelessWidget {
               color: AppColors.error,
               isSelected: false, // Nunca está seleccionado
             ),
-            
+
             const SizedBox(height: 20),
-            
+
             // Versión de la app
             Center(
               child: Text(
@@ -234,12 +242,14 @@ class CustomDrawer extends StatelessWidget {
     return ListTile(
       leading: Icon(
         icon,
-        color: color ?? (isSelected ? AppColors.primaryGreen : AppColors.mediumGrey),
+        color: color ??
+            (isSelected ? AppColors.primaryGreen : AppColors.mediumGrey),
       ),
       title: Text(
         label,
         style: TextStyle(
-          color: color ?? (isSelected ? AppColors.primaryGreen : AppColors.darkGrey),
+          color: color ??
+              (isSelected ? AppColors.primaryGreen : AppColors.darkGrey),
           fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
         ),
       ),

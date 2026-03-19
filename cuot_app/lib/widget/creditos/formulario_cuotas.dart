@@ -2,13 +2,14 @@
 import 'dart:io';
 import 'package:cuot_app/Model/credito_model.dart';
 import 'package:cuot_app/Model/cuota_personalizada.dart';
-import 'package:cuot_app/ui/pages/seguimiento_creditos_page.dart';
+
 import 'package:cuot_app/widget/creditos/custom_date_picker.dart';
 import 'package:cuot_app/widget/creditos/factura_uploader.dart';
 import 'package:flutter/material.dart' hide DateUtils;
 import 'package:cuot_app/utils/validators.dart';
 import 'package:cuot_app/widget/creditos/selector_fechas_cuotas_compacto.dart';
 import 'package:cuot_app/utils/date_utils.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart'; // 👈 NUEVO
 
 class FormularioCuotas extends StatefulWidget {
   final Function(Credito) onCreditoActualizado;
@@ -45,6 +46,7 @@ class _FormularioCuotasState extends State<FormularioCuotas> {
   List<CuotaPersonalizada>? _fechasPersonalizadas;
   bool _mostrarSelectorPersonalizado = false;
   bool _configuracionCompletada = false;
+  bool _mostrarTelefono = false; // 👈 NUEVO: Estado del checkbox
 
   // 📌 Fecha límite calculada
   DateTime? _fechaLimiteCalculada;
@@ -354,18 +356,42 @@ class _FormularioCuotasState extends State<FormularioCuotas> {
               onChanged: _actualizarCredito,
             ),
             const SizedBox(height: 20),
-            _buildSeccionTitulo('Teléfono', Icons.phone),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: _telefonoController,
-              decoration: _buildInputDecoration(
-                label: 'Número de teléfono cliente',
-                icon: Icons.phone_android,
-                prefix: '+',
-              ),
-              keyboardType: TextInputType.phone,
-              onChanged: _actualizarCredito,
+            
+            // 📌 7.5 TELEFONO OPCIONAL
+            CheckboxListTile(
+              title: const Text('Agregar número de teléfono'),
+              value: _mostrarTelefono,
+              activeColor: Theme.of(context).primaryColor,
+              onChanged: (val) {
+                setState(() => _mostrarTelefono = val ?? false);
+                _actualizarCredito();
+              },
+              controlAffinity: ListTileControlAffinity.leading,
+              contentPadding: EdgeInsets.zero,
             ),
+
+            if (_mostrarTelefono) ...[
+              _buildSeccionTitulo('Teléfono', Icons.phone),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _telefonoController,
+                decoration: _buildInputDecoration(
+                  label: 'Número de WhatsApp',
+                  icon: Icons.phone_android,
+                  prefix: '+',
+                  suffixIcon: const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: FaIcon(
+                      FontAwesomeIcons.whatsapp,
+                      color: Colors.green,
+                      size: 20,
+                    ),
+                  ),
+                ),
+                keyboardType: TextInputType.phone,
+                onChanged: _actualizarCredito,
+              ),
+            ],
             const SizedBox(height: 20),
             
             // 📌 8. FACTURA (OPCIONAL)
@@ -558,7 +584,7 @@ class _FormularioCuotasState extends State<FormularioCuotas> {
             ),
             _buildInfoRow(
               'Duración:',
-              '${DateUt.calcularDiferenciaMeses(_fechaInicio, _fechaLimiteCalculada ?? _fechaInicio)} meses',
+              DateUt.formatearDuracion(_fechaInicio, _fechaLimiteCalculada ?? _fechaInicio),
             ),
             const Divider(),
             _buildInfoRow(
@@ -667,7 +693,7 @@ class _FormularioCuotasState extends State<FormularioCuotas> {
         fechaInicio: _fechaInicio,
         modalidadPago: _modalidadSeleccionada,
         nombreCliente: _clienteController.text,
-        telefono: _telefonoController.text,
+        telefono: _mostrarTelefono ? _telefonoController.text : '', // 👈 Condicional
         numeroCuotas: _numCuotas,
         facturaPath: _facturaSeleccionada?.path,
         nombreFactura: _facturaSeleccionada?.path.split('/').last,
@@ -802,16 +828,17 @@ class _FormularioCuotasState extends State<FormularioCuotas> {
       ],
     );
   }
-
   InputDecoration _buildInputDecoration({
     required String label,
     IconData? icon,
     String? prefix,
+    Widget? suffixIcon,
   }) {
     return InputDecoration(
       labelText: label,
       prefixText: prefix,
       prefixIcon: icon != null ? Icon(icon, size: 20) : null,
+      suffixIcon: suffixIcon, // 👈 USAR
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       filled: true,
       fillColor: Colors.grey.shade50,

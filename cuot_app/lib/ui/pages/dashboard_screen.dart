@@ -8,6 +8,8 @@ import 'package:cuot_app/widget/dashboard/overdue_payments.dart';
 import 'package:cuot_app/widget/dashboard/upcoming_payments.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:cuot_app/ui/pages/seguimiento_creditos_page.dart';
+import 'package:cuot_app/ui/pages/cuotapp_login_page.dart';
 
 class DashboardScreen extends StatelessWidget {
   final String? userName;
@@ -24,12 +26,40 @@ class DashboardScreen extends StatelessWidget {
       create: (_) => DashboardController(correo: correo, userName: userName),
       child: PopScope(
         canPop: false,
-        onPopInvoked: (didPop) {
+        onPopInvoked: (didPop) async {
           if (didPop) return;
-          if (_scaffoldKey.currentState?.isDrawerOpen ?? false) {
-            _scaffoldKey.currentState?.closeDrawer();
-          } else {
-            Navigator.of(context).pop();
+          
+          final scaffoldState = _scaffoldKey.currentState;
+          if (scaffoldState?.isDrawerOpen ?? false) {
+            scaffoldState?.closeDrawer();
+            return;
+          }
+
+          // Mostrar diálogo de confirmación
+          final bool? shouldLogout = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('¿Cerrar sesión?'),
+              content: const Text('¿Estás seguro de que deseas cerrar la sesión y salir al login?'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('CANCELAR'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  style: TextButton.styleFrom(foregroundColor: AppColors.error),
+                  child: const Text('CERRAR SESIÓN'),
+                ),
+              ],
+            ),
+          );
+
+          if (shouldLogout == true && context.mounted) {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (context) => const CuotAppLoginPage()),
+              (Route<dynamic> route) => false,
+            );
           }
         },
         child: Consumer<DashboardController>(
@@ -92,7 +122,7 @@ class DashboardScreen extends StatelessWidget {
                                     ),
                                   ),
                                   Text(
-                                    controller.getName(),
+                                    controller.getFirstName(),
                                     style: const TextStyle(
                                       color: Colors.white,
                                       fontWeight: FontWeight.bold,
@@ -226,6 +256,16 @@ class DashboardScreen extends StatelessWidget {
                               totalPaid: controller.totalPaid,
                               pendingWeeklyQuotas: controller.pendingWeeklyQuotas,
                               pendingBalance: controller.pendingBalance,
+                              onTapActiveCredits: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => SeguimientoCreditosPage(
+                                      nombreUsuario: userName ?? "Usuario",
+                                    ),
+                                  ),
+                                );
+                              },
                             ),
 
                             const SizedBox(height: 24),

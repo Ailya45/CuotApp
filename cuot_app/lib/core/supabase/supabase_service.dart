@@ -37,6 +37,16 @@ class SupabaseService {
     }
   }
 
+  // 📁 STORAGE: Eliminar archivos del bucket 'Documentos'
+  Future<void> deleteFile(String path) async {
+    _checkInitialized();
+    try {
+      await client.storage.from('Documentos').remove([path]);
+    } catch (e) {
+      print('❌ Error al eliminar archivo de Storage: $e');
+    }
+  }
+
   // 📊 DB: Métodos con soporte de esquemas
   Future<List<Map<String, dynamic>>> fetchAll(String table, {String schema = 'Financiamientos'}) async {
     _checkInitialized();

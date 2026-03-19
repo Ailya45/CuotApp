@@ -97,7 +97,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
     
-      drawer: CustomDrawer(nombre_usuario: "nombreUsuario", ventanaActiva: "Configuración"),
+      drawer: CustomDrawer(nombre_usuario: widget.nombreUsuario ?? "Usuario", ventanaActiva: "Configuración"),
       appBar: AppBar(
         title: const Text('Configuración'),
       ),

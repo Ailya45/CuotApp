@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cuot_app/theme/app_colors.dart';
 import 'package:cuot_app/Model/cuota_personalizada.dart';
 import 'package:cuot_app/Model/pago_model.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart'; // 👈 NUEVO
 
 class TarjetaFinanciamiento extends StatefulWidget {
   final String nombreCliente;
@@ -129,12 +130,25 @@ class _TarjetaFinanciamientoState extends State<TarjetaFinanciamiento> {
                                     const Icon(Icons.phone, size: 14, color: Colors.grey),
                                     const SizedBox(width: 4),
                                     Text(
-                                      widget.telefono,
-                                      style: const TextStyle(
+                                      widget.telefono.isEmpty 
+                                          ? 'No tiene' 
+                                          : widget.telefono,
+                                      style: TextStyle(
                                         fontSize: 13,
                                         color: Colors.grey,
+                                        fontStyle: widget.telefono.isEmpty 
+                                            ? FontStyle.italic 
+                                            : FontStyle.normal,
                                       ),
                                     ),
+                                    if (widget.telefono.isNotEmpty) ...[
+                                      const SizedBox(width: 8),
+                                      const FaIcon(
+                                        FontAwesomeIcons.whatsapp,
+                                        size: 14,
+                                        color: Colors.green,
+                                      ),
+                                    ],
                                   ],
                                 ),
                                 const SizedBox(height: 4),

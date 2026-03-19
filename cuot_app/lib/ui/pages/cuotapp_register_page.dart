@@ -17,11 +17,10 @@ class _CuotAppRegisterPageState extends State<CuotAppRegisterPage> {
   static const Color kPrimaryGreen = Color(0xFF00C853);
 
   int _currentStep = 0;
+  bool _isRegistering = false;
 
-  // Keys de formularios
   final formStep1Key = GlobalKey<FormState>();
 
-  // Controllers compartidos
   final TextEditingController nombreCtrl = TextEditingController();
   final TextEditingController emailCtrl = TextEditingController();
   final TextEditingController telefonoCtrl = TextEditingController();
@@ -42,13 +41,14 @@ class _CuotAppRegisterPageState extends State<CuotAppRegisterPage> {
     super.dispose();
   }
 
-  bool isEmpty () {
-    return nombreCtrl.text.isEmpty || emailCtrl.text.isEmpty || telefonoCtrl.text.isEmpty || contrasenaCtrl.text.isEmpty;
-  }
+  bool isEmpty() => 
+      nombreCtrl.text.isEmpty || 
+      emailCtrl.text.isEmpty || 
+      telefonoCtrl.text.isEmpty || 
+      contrasenaCtrl.text.isEmpty;
 
-  bool isContrasenaValid () {
-    return contrasenaCtrl.text == contrasenaVerificaCtrl.text;
-  }
+  bool isContrasenaValid() => 
+      contrasenaCtrl.text == contrasenaVerificaCtrl.text;
 
   Future<void> _continuar() async {
     final bool isLastStep = _currentStep == _steps.length - 1;
@@ -57,74 +57,71 @@ class _CuotAppRegisterPageState extends State<CuotAppRegisterPage> {
       if (formStep1Key.currentState?.validate() != true) return;
     }
 
-    if (isContrasenaValid()) {
-      if (!isEmpty()) {
-        if (isLastStep) {
-          // TODO: enviar datos al backend (ahora con soporte para imagen/pdf en Supabase Storage en el futuro)
-          final supabaseService = SupabaseService();
-        
-          try {
-            String? cedulaUrl;
-            if (cedulaFile != null) {
-              cedulaUrl = await supabaseService.uploadFile(
-                folder: 'cedulas',
-                fileName: 'cedula_${cedulaCtrl.text}_${DateTime.now().millisecondsSinceEpoch}.jpg',
-                file: cedulaFile!,
-              );
-            }
+    if (!isContrasenaValid()) {
+      _showSnackBar('Las contraseñas no coinciden.', Colors.redAccent);
+      return;
+    }
 
-            await supabaseService.client.schema("Financiamientos").from("Usuarios").insert({
-              "Nombre_Completo": nombreCtrl.text,
-              "Correo_Electronico": emailCtrl.text,
-              "Telefono": telefonoCtrl.text,
-              "Cedula": cedulaCtrl.text,
-              "Contrasena": contrasenaCtrl.text,
-              "cedula_url": cedulaUrl,
-            });
+    if (isEmpty()) {
+      _showSnackBar('Por favor, rellena todos los campos.', Colors.redAccent);
+      return;
+    }
 
-            if(mounted){
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('¡Registro completado!'),
-                  backgroundColor: Colors.green,
-                ),
-              );
+    if (isLastStep) {
+      await _registrarUsuario();
+    } else {
+      setState(() => _currentStep += 1);
+    }
+  }
 
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const CuotAppLoginPage()),
-              );
-            }
-          } catch(e) {
-             if(mounted){
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Error al registrar: $e'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-             }
-          }
-          
-        } else {
-          setState(() => _currentStep += 1);
-        }
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Por favor, rellena todos los campos.'),
-            backgroundColor: Colors.redAccent,
-          ),
+  Future<void> _registrarUsuario() async {
+    setState(() => _isRegistering = true);
+    final supabaseService = SupabaseService();
+    String? cedulaPath;
+
+    try {
+      String? cedulaUrl;
+      if (cedulaFile != null) {
+        cedulaPath = 'cedulas/cedula_${cedulaCtrl.text}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        cedulaUrl = await supabaseService.uploadFile(
+          folder: 'cedulas',
+          fileName: 'cedula_${cedulaCtrl.text}_${DateTime.now().millisecondsSinceEpoch}.jpg',
+          file: cedulaFile!,
         );
       }
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Las contraseñas no coinciden.'),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
+
+      await supabaseService.client.schema("Usuarios").from("Usuarios").insert({
+        "Nombre_Completo": nombreCtrl.text,
+        "Correo_Electronico": emailCtrl.text,
+        "Telefono": telefonoCtrl.text,
+        "Cedula": cedulaCtrl.text,
+        "Contrasena": contrasenaCtrl.text,
+        "cedula_url": cedulaUrl,
+      });
+
+      if (mounted) {
+        _showSnackBar('¡Registro completado!', Colors.green);
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const CuotAppLoginPage()),
+        );
+      }
+    } catch (e) {
+      if (cedulaPath != null) {
+        await supabaseService.deleteFile(cedulaPath);
+      }
+      if (mounted) {
+        _showSnackBar('Error al registrar: $e', Colors.red);
+      }
+    } finally {
+      if (mounted) setState(() => _isRegistering = false);
     }
+  }
+
+  void _showSnackBar(String message, Color color) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: color),
+    );
   }
 
   void _atras() {
@@ -198,7 +195,7 @@ class _CuotAppRegisterPageState extends State<CuotAppRegisterPage> {
         ),
         child: Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(primary: kPrimaryGreen),
+            colorScheme: const ColorScheme.light(primary: kPrimaryGreen),
           ),
           child: Stepper(
             type: StepperType.vertical,
@@ -216,7 +213,7 @@ class _CuotAppRegisterPageState extends State<CuotAppRegisterPage> {
                   children: [
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: details.onStepContinue,
+                        onPressed: _isRegistering ? null : details.onStepContinue,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: kPrimaryGreen,
                           foregroundColor: Colors.white,
@@ -226,17 +223,27 @@ class _CuotAppRegisterPageState extends State<CuotAppRegisterPage> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        child: Text(
-                          isLast ? 'FINALIZAR REGISTRO' : 'CONTINUAR',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                        ),
+                        child: _isRegistering 
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                            )
+                          : FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                isLast ? 'FINALIZAR REGISTRO' : 'CONTINUAR',
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                maxLines: 1,
+                              ),
+                            ),
                       ),
                     ),
                     if (_currentStep != 0) ...[
                       const SizedBox(width: 12),
                       Expanded(
                         child: OutlinedButton(
-                          onPressed: details.onStepCancel,
+                          onPressed: _isRegistering ? null : details.onStepCancel,
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.grey.shade700,
                             padding: const EdgeInsets.symmetric(vertical: 16),
@@ -245,9 +252,12 @@ class _CuotAppRegisterPageState extends State<CuotAppRegisterPage> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          child: const Text(
-                            'VOLVER',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                          child: const FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              'VOLVER',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                            ),
                           ),
                         ),
                       ),
