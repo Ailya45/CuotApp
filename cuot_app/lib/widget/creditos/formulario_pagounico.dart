@@ -9,11 +9,15 @@ import 'package:cuot_app/utils/date_utils.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart'; // 👈 NUEVO
 
 class FormularioPagounico extends StatefulWidget {
+  final Credito? creditoInicial;
+  final double totalPagado;
   final Function(Credito) onCreditoActualizado;
   final Function() onGuardar;
 
   const FormularioPagounico({
     super.key,
+    this.creditoInicial,
+    this.totalPagado = 0.0,
     required this.onCreditoActualizado,
     required this.onGuardar,
   });
@@ -42,7 +46,32 @@ class _FormularioPagounicoState extends State<FormularioPagounico> {
   double get _inversion => double.tryParse(_inversionController.text) ?? 0;
   double get _ganancia => double.tryParse(_gananciaController.text) ?? 0;
   double get _precioTotal => _inversion + _ganancia;
-  
+
+  @override
+  void initState() {
+    super.initState();
+    _inicializarDatosEdit();
+  }
+
+  void _inicializarDatosEdit() {
+    if (widget.creditoInicial != null) {
+      final credito = widget.creditoInicial!;
+      _conceptoController.text = credito.concepto;
+      _inversionController.text = credito.costeInversion.toString();
+      _gananciaController.text = credito.margenGanancia.toString();
+      _clienteController.text = credito.nombreCliente;
+      
+      if (credito.telefono != null && credito.telefono!.isNotEmpty) {
+        _mostrarTelefono = true;
+        _telefonoController.text = credito.telefono!;
+      }
+
+      _fechaInicio = credito.fechaInicio;
+      if (credito.fechaLimite != null) {
+        _fechaLimite = credito.fechaLimite!;
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -450,6 +479,14 @@ class _FormularioPagounicoState extends State<FormularioPagounico> {
       return;
     }
 
+    if (_precioTotal < widget.totalPagado) {
+      _mostrarError(
+        'Monto inválido',
+        'El precio total de \$${_precioTotal.toStringAsFixed(2)} no puede ser menor a lo que el cliente ya pagó (\$${widget.totalPagado.toStringAsFixed(2)}).',
+      );
+      return;
+    }
+
     // Validar fechas
     if (_fechaLimite.isBefore(_fechaInicio)) {
       _mostrarError(
@@ -460,7 +497,7 @@ class _FormularioPagounicoState extends State<FormularioPagounico> {
     }
 
     // Diálogo para factura opcional
-    if (_facturaSeleccionada == null) {
+    if (_facturaSeleccionada == null && widget.creditoInicial?.facturaPath == null) {
       _mostrarDialogoFacturaOpcional();
     } else {
       widget.onGuardar();

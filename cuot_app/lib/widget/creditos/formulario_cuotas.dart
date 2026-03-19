@@ -12,11 +12,15 @@ import 'package:cuot_app/utils/date_utils.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart'; // 👈 NUEVO
 
 class FormularioCuotas extends StatefulWidget {
+  final Credito? creditoInicial;
+  final double totalPagado;
   final Function(Credito) onCreditoActualizado;
   final Function() onGuardar;
 
   const FormularioCuotas({
     super.key,
+    this.creditoInicial,
+    this.totalPagado = 0.0,
     required this.onCreditoActualizado,
     required this.onGuardar,
   });
@@ -61,7 +65,33 @@ class _FormularioCuotasState extends State<FormularioCuotas> {
   @override
   void initState() {
     super.initState();
+    _inicializarDatosEdit();
     _calcularFechaLimite();
+  }
+
+  void _inicializarDatosEdit() {
+    if (widget.creditoInicial != null) {
+      final credito = widget.creditoInicial!;
+      _conceptoController.text = credito.concepto;
+      _inversionController.text = credito.costeInversion.toString();
+      _gananciaController.text = credito.margenGanancia.toString();
+      _cuotasController.text = credito.numeroCuotas.toString();
+      _clienteController.text = credito.nombreCliente;
+      
+      if (credito.telefono != null && credito.telefono!.isNotEmpty) {
+        _mostrarTelefono = true;
+        _telefonoController.text = credito.telefono!;
+      }
+
+      _fechaInicio = credito.fechaInicio;
+      _modalidadSeleccionada = credito.modalidadPago;
+
+      if (credito.fechasPersonalizadas != null && credito.fechasPersonalizadas!.isNotEmpty) {
+        _fechasPersonalizadas = credito.fechasPersonalizadas;
+        _configuracionCompletada = true;
+        _mostrarSelectorPersonalizado = true;
+      }
+    }
   }
 
   // 📌 Calcular fecha límite
@@ -741,7 +771,7 @@ class _FormularioCuotasState extends State<FormularioCuotas> {
       }
     }
 
-    if (_facturaSeleccionada == null) {
+    if (_facturaSeleccionada == null && widget.creditoInicial?.facturaPath == null) {
       _mostrarDialogoFacturaOpcional();
     } else {
       widget.onGuardar();

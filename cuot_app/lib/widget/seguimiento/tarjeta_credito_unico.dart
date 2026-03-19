@@ -10,12 +10,16 @@ class TarjetaCreditoUnico extends StatefulWidget {
   final CreditoUnico credito;
   final Function(Pago) onPagoRealizado;
   final VoidCallback onVerDetalle;
+  final VoidCallback? onEditar;
+  final VoidCallback? onEliminar;
 
   const TarjetaCreditoUnico({
     super.key,
     required this.credito,
     required this.onPagoRealizado,
     required this.onVerDetalle,
+    this.onEditar,
+    this.onEliminar,
   });
 
   @override
@@ -194,6 +198,39 @@ class _TarjetaCreditoUnicoState extends State<TarjetaCreditoUnico> {
                             ],
                           ),
                         ),
+                        const SizedBox(width: 4),
+                        if (widget.onEditar != null)
+                          SizedBox(
+                            width: 28,
+                            height: 28,
+                            child: IconButton(
+                              icon: Icon(
+                                Icons.edit,
+                                size: 16,
+                                color: AppColors.info,
+                              ),
+                              onPressed: widget.onEditar,
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              tooltip: 'Editar',
+                            ),
+                          ),
+                        if (widget.onEliminar != null)
+                          SizedBox(
+                            width: 28,
+                            height: 28,
+                            child: IconButton(
+                              icon: Icon(
+                                Icons.delete,
+                                size: 16,
+                                color: AppColors.error,
+                              ),
+                              onPressed: widget.onEliminar,
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              tooltip: 'Eliminar',
+                            ),
+                          ),
                         IconButton(
                           icon: Icon(
                             _expandido 

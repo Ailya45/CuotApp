@@ -424,6 +424,72 @@ class _SeguimientoCreditosPageState extends State<SeguimientoCreditosPage> {
     );
   }
 
+  Future<void> _eliminarCredito(dynamic creditId, String nombreCliente) async {
+    final confirmado = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: AppColors.error, size: 28),
+            const SizedBox(width: 8),
+            const Text('Eliminar crédito'),
+          ],
+        ),
+        content: Text(
+          '¿Estás seguro de que deseas eliminar el crédito de $nombreCliente?\n\nEsta acción no se puede deshacer.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmado == true) {
+      try {
+        await _creditService.deleteCredit(creditId.toString());
+        await _loadData();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('✅ Crédito de $nombreCliente eliminado'),
+              backgroundColor: AppColors.success,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('❌ Error al eliminar: $e'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -525,6 +591,21 @@ class _SeguimientoCreditosPageState extends State<SeguimientoCreditosPage> {
                                 credito: item,
                                 onPagoRealizado: (pago) =>
                                     _pagarCreditoUnico(item, pago),
+                                onEditar: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => CreditoPage(
+                                        nombreUsuario: widget.nombreUsuario,
+                                        creditoIdEditar: item.id.toString(),
+                                      ),
+                                    ),
+                                  ).then((_) => _loadData());
+                                },
+                                onEliminar: () => _eliminarCredito(
+                                  item.id,
+                                  item.nombreCliente,
+                                ),
                                 onVerDetalle: () {
                                   // Navegar a detalle del crédito único
                                   ScaffoldMessenger.of(context).showSnackBar(
@@ -559,6 +640,21 @@ class _SeguimientoCreditosPageState extends State<SeguimientoCreditosPage> {
                                 cuotasVencidas: cuotasVencidas,
                                 concepto: item['concepto'] ?? 'Sin concepto',
                                 totalCredito: item['totalCredito'] ?? 0.0,
+                                onEditar: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => CreditoPage(
+                                        nombreUsuario: widget.nombreUsuario,
+                                        creditoIdEditar: item['id'].toString(),
+                                      ),
+                                    ),
+                                  ).then((_) => _loadData());
+                                },
+                                onEliminar: () => _eliminarCredito(
+                                  item['id'],
+                                  item['nombre'],
+                                ),
                                 onCuotaTap: (numeroCuota) {
                                   final cuota =
                                       (item['cuotas'] as List).firstWhere(

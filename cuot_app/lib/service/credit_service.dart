@@ -124,4 +124,148 @@ class CreditService {
       rethrow;
     }
   }
+
+  /// Obtiene un crédito por su ID con todos sus detalles (cliente, cuotas, pagos)
+  Future<Map<String, dynamic>?> getCreditById(String id) async {
+    try {
+      final response = await _supabase.client
+          .schema('Financiamientos')
+          .from('Creditos')
+          .select('''
+            *,
+            Clientes(*),
+            Cuotas(*),
+            Pagos(*)
+          ''')
+          .eq('id', id)
+          .single();
+      return response;
+    } catch (e) {
+      print('Error en getCreditById: $e');
+      return null;
+    }
+  }
+
+  /// Actualiza un crédito de pago único
+  Future<void> updateCreditUnico(String creditId, Map<String, dynamic> data) async {
+    try {
+      // 1. Actualizar datos maestros
+      await _supabase.client
+          .schema('Financiamientos')
+          .from('Creditos')
+          .update({
+            'concepto': data['concepto'],
+            'costo_inversion': data['costo_inversion'],
+            'margen_ganancia': data['margen_ganancia'],
+            if (data.containsKey('cliente_id')) 'cliente_id': data['cliente_id'],
+            if (data['fecha_vencimiento'] != null) 'fecha_vencimiento': data['fecha_vencimiento'],
+          })
+          .eq('id', creditId);
+
+      // 2. Actualizar la cuota única (la 1) con el nuevo total restando lo pagado
+      final pagos = await _supabase.client
+          .schema('Financiamientos')
+          .from('Pagos')
+          .select('monto')
+          .eq('credito_id', creditId);
+          
+      final double totalPagado = pagos.fold(0.0, (sum, pago) => sum + (pago['monto'] as num));
+      final double nuevoTotal = ((data['costo_inversion'] as num) + (data['margen_ganancia'] as num)).toDouble();
+      final double nuevoSaldo = nuevoTotal - totalPagado;
+
+      await _supabase.client
+          .schema('Financiamientos')
+          .from('Cuotas')
+          .update({
+            'monto': nuevoSaldo > 0 ? nuevoSaldo : 0,
+            'pagada': nuevoSaldo <= 0,
+            if (data['fecha_vencimiento'] != null) 'fecha_pago': data['fecha_vencimiento'],
+          })
+          .eq('credito_id', creditId)
+          .eq('numero_cuota', 1);
+
+      invalidateCache();
+    } catch (e) {
+      print('Error en updateCreditUnico: $e');
+      rethrow;
+    }
+  }
+
+  /// Actualiza un crédito en cuotas
+  /// Se recrean las cuotas NO PAGADAS con la nueva distribución.
+  Future<void> updateCreditCuotas(String creditId, Map<String, dynamic> data, List<Map<String, dynamic>> nuevasCuotasPendientes) async {
+    try {
+      // 1. Actualizar datos maestros
+      await _supabase.client
+          .schema('Financiamientos')
+          .from('Creditos')
+          .update({
+            'concepto': data['concepto'],
+            'costo_inversion': data['costo_inversion'],
+            'margen_ganancia': data['margen_ganancia'],
+            'numero_cuotas': data['numero_cuotas'],
+            if (data.containsKey('cliente_id')) 'cliente_id': data['cliente_id'],
+          })
+          .eq('id', creditId);
+
+      // 2. Eliminar cuotas que NO estén pagadas
+      await _supabase.client
+          .schema('Financiamientos')
+          .from('Cuotas')
+          .delete()
+          .eq('credito_id', creditId)
+          .eq('pagada', false);
+
+      // 3. Insertar las nuevas cuotas pendientes
+      if (nuevasCuotasPendientes.isNotEmpty) {
+        // Asegurarse de que el credit_id está en todas las cuotas
+        final cuotasToInsert = nuevasCuotasPendientes.map((c) => {
+          ...c,
+          'credito_id': creditId,
+        }).toList();
+        
+        await _supabase.client
+            .schema('Financiamientos')
+            .from('Cuotas')
+            .insert(cuotasToInsert);
+      }
+
+      invalidateCache();
+    } catch (e) {
+      print('Error en updateCreditCuotas: $e');
+      rethrow;
+    }
+  }
+
+  /// Eliminar un crédito y todos sus datos asociados (pagos y cuotas)
+  Future<void> deleteCredit(String creditId) async {
+    try {
+      // 1. Eliminar pagos asociados
+      await _supabase.client
+          .schema('Financiamientos')
+          .from('Pagos')
+          .delete()
+          .eq('credito_id', creditId);
+
+      // 2. Eliminar cuotas asociadas
+      await _supabase.client
+          .schema('Financiamientos')
+          .from('Cuotas')
+          .delete()
+          .eq('credito_id', creditId);
+
+      // 3. Eliminar el crédito
+      await _supabase.client
+          .schema('Financiamientos')
+          .from('Creditos')
+          .delete()
+          .eq('id', creditId);
+
+      // Invalidar caché
+      invalidateCache();
+    } catch (e) {
+      print('Error al eliminar crédito: $e');
+      rethrow;
+    }
+  }
 }

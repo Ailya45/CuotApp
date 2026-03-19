@@ -19,6 +19,8 @@ class TarjetaFinanciamiento extends StatefulWidget {
   final String concepto;
   final double totalCredito; // 👈 NUEVO
   final Function(int) onCuotaTap;
+  final VoidCallback? onEditar;
+  final VoidCallback? onEliminar;
 
   const TarjetaFinanciamiento({
     super.key,
@@ -35,6 +37,8 @@ class TarjetaFinanciamiento extends StatefulWidget {
     required this.concepto,
     required this.totalCredito, // 👈 NUEVO
     required this.onCuotaTap,
+    this.onEditar,
+    this.onEliminar,
   });
 
   @override
@@ -196,6 +200,39 @@ class _TarjetaFinanciamientoState extends State<TarjetaFinanciamiento> {
                             ],
                           ),
                         ),
+                        const SizedBox(width: 4),
+                        if (widget.onEditar != null)
+                          SizedBox(
+                            width: 28,
+                            height: 28,
+                            child: IconButton(
+                              icon: Icon(
+                                Icons.edit,
+                                size: 16,
+                                color: AppColors.info,
+                              ),
+                              onPressed: widget.onEditar,
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              tooltip: 'Editar',
+                            ),
+                          ),
+                        if (widget.onEliminar != null)
+                          SizedBox(
+                            width: 28,
+                            height: 28,
+                            child: IconButton(
+                              icon: Icon(
+                                Icons.delete,
+                                size: 16,
+                                color: AppColors.error,
+                              ),
+                              onPressed: widget.onEliminar,
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              tooltip: 'Eliminar',
+                            ),
+                          ),
                         IconButton(
                           icon: Icon(
                             _mostrarRegistroPagos
