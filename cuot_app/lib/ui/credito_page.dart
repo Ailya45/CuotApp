@@ -142,12 +142,16 @@ class _CreditoPageState extends State<CreditoPage> {
         // Navegar a SeguimientoCreditosPage
       
         if (context.mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => SeguimientoCreditosPage(nombreUsuario: widget.nombreUsuario),
-            ),
-          );
+          if (Navigator.canPop(context)) {
+            Navigator.pop(context, true);
+          } else {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => SeguimientoCreditosPage(nombreUsuario: widget.nombreUsuario),
+              ),
+            );
+          }
         }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(

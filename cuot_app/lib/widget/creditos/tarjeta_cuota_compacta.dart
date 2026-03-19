@@ -179,7 +179,7 @@ class _TarjetaCuotaCompactaState extends State<TarjetaCuotaCompacta> {
                   ),
                 ),
                 child: Text(
-                  '\$${widget.cuota.monto.toStringAsFixed(0)}',
+                  '\$${widget.cuota.monto.toStringAsFixed(2)}',
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,

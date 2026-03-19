@@ -792,8 +792,11 @@ class _FormularioCuotasState extends State<FormularioCuotas> {
       }
     }
 
+    final inicioSinHora = DateTime(_fechaInicio.year, _fechaInicio.month, _fechaInicio.day);
+
     for (var fecha in fechas) {
-      if (fecha.isBefore(_fechaInicio)) {
+      final fechaSinHora = DateTime(fecha.year, fecha.month, fecha.day);
+      if (fechaSinHora.isBefore(inicioSinHora)) {
         return false;
       }
     }

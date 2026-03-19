@@ -541,7 +541,7 @@ class _TarjetaFinanciamientoState extends State<TarjetaFinanciamiento> {
                 : vencida
                     ? const Icon(Icons.warning, size: 14, color: AppColors.error)
                     : Text(
-                        '\$${cuota.monto.toStringAsFixed(0)}',
+                        '\$${cuota.monto.toStringAsFixed(2)}',
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
