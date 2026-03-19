@@ -32,14 +32,15 @@ class _DialogoPagoUnicoState extends State<DialogoPagoUnico>
   bool _isLoadingTasa = false; // 👈 NUEVO: Estado de carga
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
+  late Animation<double> _fadeAnimation;
 
   final List<Map<String, dynamic>> _metodosPago = [
     {'valor': 'efectivo', 'label': 'Efectivo', 'icon': Icons.money, 'color': Colors.green},
     {'valor': 'transferencia', 'label': 'Transferencia', 'icon': Icons.compare_arrows, 'color': Colors.blue},
-    {'valor': 'pagomovil', 'label': 'Pago Movil', 'icon': Icons.credit_card, 'color': Colors.purple},
-    {'valor': 'binance', 'label': 'Binance', 'icon': Icons.currency_bitcoin, 'color': Colors.red},
-    {'valor': 'efectivodivisas', 'label': 'Efectivo Divisas', 'icon': Icons.money_off_outlined, 'color': Colors.red},
-  
+    {'valor': 'pagomovil', 'label': 'Pago Móvil', 'icon': Icons.smartphone, 'color': Colors.orange},
+    {'valor': 'divisas', 'label': 'Divisas (E)', 'icon': Icons.attach_money, 'color': Colors.teal},
+    {'valor': 'binance', 'label': 'Binance', 'icon': Icons.currency_bitcoin, 'color': Colors.amber},
+    {'valor': 'zelle', 'label': 'Zelle', 'icon': Icons.qr_code, 'color': Colors.purple},
   ];
 
   double get _maxMonto => widget.credito.saldoPendiente;
@@ -58,11 +59,15 @@ class _DialogoPagoUnicoState extends State<DialogoPagoUnico>
     
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 400),
+      duration: const Duration(milliseconds: 600), // Más suave
     );
     _scaleAnimation = CurvedAnimation(
       parent: _animationController,
-      curve: Curves.elasticOut,
+      curve: Curves.easeOutBack, // Efecto rebote suave corregido
+    );
+    _fadeAnimation = CurvedAnimation(
+      parent: _animationController,
+      curve: const Interval(0.0, 0.6, curve: Curves.easeIn), // Solo al inicio
     );
     _animationController.forward();
     
@@ -96,47 +101,35 @@ class _DialogoPagoUnicoState extends State<DialogoPagoUnico>
 
   @override
   Widget build(BuildContext context) {
-    return ScaleTransition(
-      scale: _scaleAnimation,
-      child: Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(28),
-        ),
-        elevation: 24,
-        child: Container(
-          width: double.maxFinite,
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.8,
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: ScaleTransition(
+        scale: _scaleAnimation,
+        child: Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(32), // Igual al otro (32)
           ),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(28),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Colors.white,
-                AppColors.primaryGreen.withOpacity(0.03),
-              ],
+          elevation: 24,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24), // Igual al otro
+          child: Container(
+            width: double.maxFinite,
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.85, // Igualado
             ),
-          ),
-          child: Column(
-            children: [
-              // Header decorativo
-              Container(
-                height: 8,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      widget.credito.estadoColor,
-                      widget.credito.estadoColor.withOpacity(0.7),
-                    ],
-                  ),
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(28),
-                    topRight: Radius.circular(28),
-                  ),
-                ),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(32),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.white,
+                  AppColors.primaryGreen.withOpacity(0.03),
+                ],
               ),
+            ),
+            child: Column(
+              children: [
+                // Header ya no tiene barra azul/decorativa (ELIMINADO)
               
               Expanded(
                 child: SingleChildScrollView(
@@ -182,213 +175,9 @@ class _DialogoPagoUnicoState extends State<DialogoPagoUnico>
                             ),
                           ],
                         ),
-                      ),
+                      ),                      const SizedBox(height: 20),
                       
-                      const SizedBox(height: 20),
-                      
-                      // Resumen
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryGreen.withOpacity(0.05),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: AppColors.primaryGreen.withOpacity(0.2),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Cliente',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.grey.shade600,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    widget.credito.nombreCliente,
-                                    style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: widget.credito.estadoColor.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
-                                'Total: \$${widget.credito.montoTotal.toStringAsFixed(2)}',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: widget.credito.estadoColor,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      
-                      const SizedBox(height: 20),
-                      
-                      // Información de pagos
-                      Row(
-                        children: [
-                          _buildInfoCard(
-                            'Pagado',
-                            '\$${widget.credito.totalPagado.toStringAsFixed(2)}',
-                            AppColors.success,
-                          ),
-                          const SizedBox(width: 12),
-                          _buildInfoCard(
-                            'Pendiente',
-                            '\$${widget.credito.saldoPendiente.toStringAsFixed(2)}',
-                            AppColors.warning,
-                          ),
-                        ],
-                      ),
-                      
-                      const SizedBox(height: 20),
-                      
-                      // Campo de monto
-                      TextFormField(
-                        controller: _montoController,
-                        decoration: InputDecoration(
-                          labelText: widget.esParcial
-                              ? 'Monto a pagar (parcial)'
-                              : 'Monto total',
-                          prefixText: '\$ ',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          filled: true,
-                          fillColor: Colors.grey.shade50,
-                        ),
-                        keyboardType: TextInputType.number,
-                        enabled: widget.esParcial,
-                        onChanged: (value) => setState(() {}), // Actualizar Bs.
-                      ),
-                      
-                      const SizedBox(height: 16),
-
-                    // 👈 NUEVO: Tasa de cambio y Monto en Bs. (LAYOUT MEJORADO A FULL WIDTH)
-                    TextFormField(
-                      controller: _tasaController,
-                      readOnly: true,
-                      style: const TextStyle(
-                        fontSize: 22, // 👈 Más grande
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue,
-                        letterSpacing: 1.2,
-                      ),
-                      decoration: InputDecoration(
-                        labelText: 'Tasa del día (BCV)',
-                        prefixText: 'Bs. ',
-                        prefixStyle: const TextStyle(fontSize: 18, color: Colors.blue),
-                        suffixIcon: _isLoadingTasa 
-                          ? const SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: Padding(
-                                padding: EdgeInsets.all(12),
-                                child: CircularProgressIndicator(strokeWidth: 2.5),
-                              ),
-                            )
-                          : IconButton(
-                              icon: const Icon(Icons.refresh, size: 28),
-                              onPressed: _cargarTasaBcv,
-                              tooltip: 'Refrescar tasa BCV',
-                            ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        filled: true,
-                        fillColor: Colors.blue.withOpacity(0.05),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 16),
-                    
-                    // Equivalente en Bolívares (Full width - FIX OVERFLOW)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryGreen.withOpacity(0.05),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: AppColors.primaryGreen.withOpacity(0.2),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          const Text(
-                            'EQUIVALENTE EN BOLÍVARES',
-                            style: TextStyle(
-                              fontSize: 10, 
-                              color: Colors.grey,
-                              letterSpacing: 1.1,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Text(
-                              () {
-                                final montoUsd = double.tryParse(_montoController.text) ?? 0.0;
-                                final tasa = double.tryParse(_tasaController.text) ?? 0.0;
-                                final totalBs = montoUsd * tasa;
-                                return 'Bs. ${totalBs.toStringAsFixed(2)}';
-                              }(),
-                              style: TextStyle(
-                                fontSize: 28, // 👈 Se mantiene grande pero escala si es necesario
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.primaryGreen,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                      
-                      if (widget.esParcial) ...[
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildMontoRapido(0.25),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: _buildMontoRapido(0.5),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: _buildMontoRapido(0.75),
-                            ),
-                          ],
-                        ),
-                      ],
-                      
-                      const SizedBox(height: 16),
-                      
-                      // Método de pago
+                      // 1. Métodos de pago (AHORA PRIMERO)
                       const Text(
                         'Método de pago',
                         style: TextStyle(
@@ -397,10 +186,18 @@ class _DialogoPagoUnicoState extends State<DialogoPagoUnico>
                         ),
                       ),
                       const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: _metodosPago.map((metodo) {
+                      GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          childAspectRatio: 2.5,
+                          crossAxisSpacing: 10,
+                          mainAxisSpacing: 10,
+                        ),
+                        itemCount: _metodosPago.length,
+                        itemBuilder: (context, index) {
+                          final metodo = _metodosPago[index];
                           final isSelected = _metodoPago == metodo['valor'];
                           return GestureDetector(
                             onTap: () {
@@ -408,59 +205,77 @@ class _DialogoPagoUnicoState extends State<DialogoPagoUnico>
                                 _metodoPago = metodo['valor'];
                               });
                             },
-                            child: Container(
-                              width: (MediaQuery.of(context).size.width - 80) / 2,
-                              padding: const EdgeInsets.symmetric(vertical: 10),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
                               decoration: BoxDecoration(
-                                gradient: isSelected
-                                    ? LinearGradient(
-                                        colors: [
-                                          metodo['color'],
-                                          metodo['color'].withOpacity(0.7),
-                                        ],
-                                      )
-                                    : null,
-                                color: isSelected ? null : Colors.grey.shade50,
+                                color: isSelected 
+                                    ? metodo['color'] 
+                                    : metodo['color'].withOpacity(0.05),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
-                                  color: isSelected
-                                      ? Colors.transparent
+                                  color: isSelected 
+                                      ? Colors.transparent 
                                       : metodo['color'].withOpacity(0.3),
                                 ),
+                                boxShadow: isSelected ? [
+                                  BoxShadow(
+                                    color: metodo['color'].withOpacity(0.3),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 4),
+                                  )
+                                ] : null,
                               ),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Icon(
                                     metodo['icon'],
-                                    color: isSelected 
-                                        ? Colors.white 
-                                        : metodo['color'],
+                                    color: isSelected ? Colors.white : metodo['color'],
                                     size: 18,
                                   ),
                                   const SizedBox(width: 8),
-                                  Text(
-                                    metodo['label'],
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: isSelected 
-                                          ? Colors.white 
-                                          : metodo['color'],
-                                      fontWeight: isSelected
-                                          ? FontWeight.bold
-                                          : FontWeight.normal,
+                                  Flexible(
+                                    child: Text(
+                                      metodo['label'],
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: isSelected ? Colors.white : metodo['color'],
+                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                 ],
                               ),
                             ),
                           );
-                        }).toList(),
+                        },
                       ),
+                      
+                      // 2. Campo de referencia condicional
+                      if (_metodoPago == 'transferencia' || 
+                          _metodoPago == 'pagomovil' || 
+                          _metodoPago == 'zelle') ...[
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _referenciaController,
+                          decoration: InputDecoration(
+                            labelText: 'Referencia',
+                            hintText: 'Ej: 1234',
+                            prefixIcon: const Icon(Icons.confirmation_number_outlined),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            filled: true,
+                            fillColor: Colors.grey.shade50,
+                          ),
+                        ),
+                      ],
                       
                       const SizedBox(height: 16),
                       
-                      // Fecha de pago
+                      // 3. Fecha de pago
                       InkWell(
                         onTap: () async {
                           final date = await showDatePicker(
@@ -516,7 +331,7 @@ class _DialogoPagoUnicoState extends State<DialogoPagoUnico>
                       
                       const SizedBox(height: 16),
                       
-                      // Observaciones
+                      // 4. Observaciones
                       TextFormField(
                         controller: _observacionesController,
                         maxLines: 2,
@@ -529,7 +344,180 @@ class _DialogoPagoUnicoState extends State<DialogoPagoUnico>
                           fillColor: Colors.grey.shade50,
                         ),
                       ),
+
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 20),
+                        child: Divider(),
+                      ),
+
+                      // 5. Campo de monto
+                      TextFormField(
+                        controller: _montoController,
+                        decoration: InputDecoration(
+                          labelText: widget.esParcial
+                              ? 'Monto a pagar (parcial)'
+                              : 'Monto total',
+                          prefixText: '\$ ',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          filled: true,
+                          fillColor: Colors.grey.shade50,
+                        ),
+                        keyboardType: TextInputType.number,
+                        enabled: widget.esParcial,
+                        onChanged: (value) => setState(() {}),
+                      ),
                       
+                      const SizedBox(height: 16),
+
+                      // 6. Tasa del día
+                      TextFormField(
+                        controller: _tasaController,
+                        readOnly: true,
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue,
+                        ),
+                        decoration: InputDecoration(
+                          labelText: 'Tasa del día (BCV)',
+                          prefixText: 'Bs. ',
+                          suffixIcon: _isLoadingTasa 
+                            ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: Padding(
+                                  padding: EdgeInsets.all(12),
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                              )
+                            : IconButton(
+                                icon: const Icon(Icons.refresh),
+                                onPressed: _cargarTasaBcv,
+                              ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          filled: true,
+                          fillColor: Colors.blue.withOpacity(0.05),
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 16),
+                      
+                      // 7. Equivalente en Bolívares
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryGreen.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: AppColors.primaryGreen.withOpacity(0.2),
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            const Text(
+                              'EQUIVALENTE EN BOLÍVARES',
+                              style: TextStyle(
+                                fontSize: 10, 
+                                color: Colors.grey,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                () {
+                                  final montoUsd = double.tryParse(_montoController.text) ?? 0.0;
+                                  final tasa = double.tryParse(_tasaController.text) ?? 0.0;
+                                  return 'Bs. ${(montoUsd * tasa).toStringAsFixed(2)}';
+                                }(),
+                                style: TextStyle(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primaryGreen,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      
+                      if (widget.esParcial) ...[
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(child: _buildMontoRapido(0.25)),
+                            const SizedBox(width: 8),
+                            Expanded(child: _buildMontoRapido(0.5)),
+                            const SizedBox(width: 8),
+                            Expanded(child: _buildMontoRapido(0.75)),
+                          ],
+                        ),
+                      ],
+
+                      const SizedBox(height: 24),
+                      
+                      // 8. Resumen Cliente
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryGreen.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: AppColors.primaryGreen.withOpacity(0.2),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Cliente',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
+                                  Text(
+                                    widget.credito.nombreCliente,
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 12),
+                      
+                      // 9. Info Cards
+                      Row(
+                        children: [
+                          _buildInfoCard(
+                            'Pagado',
+                            '\$${widget.credito.totalPagado.toStringAsFixed(2)}',
+                            AppColors.success,
+                          ),
+                          const SizedBox(width: 12),
+                          _buildInfoCard(
+                            'Pendiente',
+                            '\$${widget.credito.saldoPendiente.toStringAsFixed(2)}',
+                            const Color(0xFFD48806),
+                          ),
+                        ],
+                      ),
+
                       const SizedBox(height: 24),
                       
                       // 👈 INTEGRADO: Resumen final de pago (ESTILO REUTILIZADO)
@@ -631,8 +619,9 @@ class _DialogoPagoUnicoState extends State<DialogoPagoUnico>
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildInfoCard(String label, String valor, Color color) {
     return Expanded(

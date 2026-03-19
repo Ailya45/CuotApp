@@ -72,4 +72,32 @@ class DateUt {
     int meses = (fin.year - inicio.year) * 12 + (fin.month - inicio.month);
     return meses < 0 ? 0 : meses;
   }
+
+  /// Formatea la duración legiblemente (Ej: "15 días", "1 mes" o "2 meses y 5 días")
+  static String formatearDuracion(DateTime inicio, DateTime fin) {
+    if (fin.isBefore(inicio)) return '0 días';
+    
+    final diferenciaTotalDias = fin.difference(inicio).inDays;
+    if (diferenciaTotalDias < 30) {
+      return '$diferenciaTotalDias días';
+    }
+
+    int meses = (fin.year - inicio.year) * 12 + (fin.month - inicio.month);
+    
+    // Ajustar los meses si el día del mes de fin es menor al de inicio
+    DateTime fechaMesesCompletos = DateTime(inicio.year, inicio.month + meses, inicio.day);
+    if (fechaMesesCompletos.isAfter(fin)) {
+      meses--;
+      fechaMesesCompletos = DateTime(inicio.year, inicio.month + meses, inicio.day);
+    }
+    
+    final diasRestantes = fin.difference(fechaMesesCompletos).inDays;
+    
+    String resultado = '$meses ${meses == 1 ? 'mes' : 'meses'}';
+    if (diasRestantes > 0) {
+      resultado += ' y $diasRestantes ${diasRestantes == 1 ? 'día' : 'días'}';
+    }
+    
+    return resultado;
+  }
 }

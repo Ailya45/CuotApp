@@ -4,6 +4,7 @@ import 'package:cuot_app/Model/credito_unico_model.dart';
 import 'package:cuot_app/Model/pago_model.dart';
 import 'package:cuot_app/theme/app_colors.dart';
 import 'package:cuot_app/widget/seguimiento/dialogo_pago_unico.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart'; // 👈 NUEVO
 
 class TarjetaCreditoUnico extends StatefulWidget {
   final CreditoUnico credito;
@@ -137,12 +138,25 @@ class _TarjetaCreditoUnicoState extends State<TarjetaCreditoUnico> {
                                     ),
                                     const SizedBox(width: 4),
                                     Text(
-                                      widget.credito.telefono,
+                                      widget.credito.telefono.isEmpty 
+                                          ? 'No tiene' 
+                                          : widget.credito.telefono,
                                       style: TextStyle(
                                         fontSize: 12,
                                         color: Colors.grey.shade600,
+                                        fontStyle: widget.credito.telefono.isEmpty 
+                                            ? FontStyle.italic 
+                                            : FontStyle.normal,
                                       ),
                                     ),
+                                    if (widget.credito.telefono.isNotEmpty) ...[
+                                      const SizedBox(width: 8),
+                                      const FaIcon(
+                                        FontAwesomeIcons.whatsapp,
+                                        size: 12,
+                                        color: Colors.green,
+                                      ),
+                                    ],
                                   ],
                                 ),
                               ),

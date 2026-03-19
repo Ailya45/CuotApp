@@ -16,7 +16,7 @@ class BiometricAuthService {
     try {
       final isAvailable = await _localAuth.canCheckBiometrics;
       final isDeviceSupported = await _localAuth.isDeviceSupported();
-      
+
       if (!isAvailable || !isDeviceSupported) {
         return false;
       }
@@ -32,7 +32,8 @@ class BiometricAuthService {
   Future<bool> authenticateWithBiometrics() async {
     try {
       final isAuthenticated = await _localAuth.authenticate(
-        localizedReason: 'Autentícate para guardar tu huella y acceder más rápido',
+        localizedReason:
+            'Autentícate para guardar tu huella y acceder más rápido',
         options: const AuthenticationOptions(
           stickyAuth: true,
           biometricOnly: true,
@@ -55,7 +56,7 @@ class BiometricAuthService {
     final email = await _storage.read(key: 'biometric_email');
     final password = await _storage.read(key: 'biometric_password');
     final enabled = await _storage.read(key: 'biometric_enabled');
-    
+
     return {
       'email': email,
       'password': password,
@@ -67,7 +68,7 @@ class BiometricAuthService {
     final email = await _storage.read(key: 'biometric_email');
     final password = await _storage.read(key: 'biometric_password');
     final enabled = await _storage.read(key: 'biometric_enabled');
-    
+
     return email != null && password != null && enabled == 'true';
   }
 
@@ -80,7 +81,7 @@ class BiometricAuthService {
 
 class CuotAppLoginCard extends StatefulWidget {
   final Color primaryGreen;
-  
+
   const CuotAppLoginCard({super.key, required this.primaryGreen});
 
   @override
@@ -90,7 +91,7 @@ class CuotAppLoginCard extends StatefulWidget {
 class _CuotAppLoginCardState extends State<CuotAppLoginCard> {
   final LoginForm _loginForm = LoginForm();
   final BiometricAuthService _biometricService = BiometricAuthService();
-  
+
   bool _isLoading = false;
   bool _isBiometricLoading = false;
   bool _showBiometricButton = false;
@@ -105,11 +106,11 @@ class _CuotAppLoginCardState extends State<CuotAppLoginCard> {
   Future<void> _checkBiometricStatus() async {
     final hasCredentials = await _biometricService.hasBiometricCredentials();
     final isAvailable = await _biometricService.isBiometricAvailable();
-    
+
     setState(() {
       _showBiometricButton = hasCredentials && isAvailable;
     });
-    
+
     print('🔍 Estado biometría:');
     print('  - Tiene credenciales: $hasCredentials');
     print('  - Biometría disponible: $isAvailable');
@@ -118,7 +119,7 @@ class _CuotAppLoginCardState extends State<CuotAppLoginCard> {
 
   Future<void> _iniciarSesion({String? email, String? password}) async {
     FocusScope.of(context).unfocus();
-    
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -135,7 +136,7 @@ class _CuotAppLoginCardState extends State<CuotAppLoginCard> {
       print('📧 Intentando login con: $correo');
 
       final supabaseService = SupabaseService();
-      
+
       final usuarios = await supabaseService.client
           .schema('Usuarios')
           .from('Credenciales')
@@ -148,23 +149,28 @@ class _CuotAppLoginCardState extends State<CuotAppLoginCard> {
       }
 
       final contrasenaBD = usuarios['Contrasena'] ?? '';
-      
+
       if (contrasena == contrasenaBD) {
         print('✅ Login exitoso para: $correo');
-        
+
         final user = await supabaseService.client
             .schema("Usuarios")
             .from("Usuarios")
             .select("Nombre_Completo")
             .eq('Correo_Electronico', correo)
             .maybeSingle();
-            
-        String nombre = user?['Nombre_Completo'] ?? '';
-        nombre = nombre.replaceAll('{', '').replaceAll('}', '');
+
+        final nombreCompleto = (user?['Nombre_Completo'] ?? '')
+            .toString()
+            .replaceAll('{', '')
+            .replaceAll('}', '')
+            .trim();
+        final nombre = nombreCompleto;
 
         // Verificar si ya tiene credenciales guardadas
-        final hasCredentials = await _biometricService.hasBiometricCredentials();
-        
+        final hasCredentials =
+            await _biometricService.hasBiometricCredentials();
+
         // Variable para controlar si debemos navegar al dashboard
         bool shouldNavigateToDashboard = true;
 
@@ -173,10 +179,11 @@ class _CuotAppLoginCardState extends State<CuotAppLoginCard> {
           setState(() {
             _isLoading = false;
           });
-          
+
           // Mostrar diálogo y esperar resultado
-          final result = await _showEnableBiometricDialog(context, correo, contrasena);
-          
+          final result =
+              await _showEnableBiometricDialog(context, correo, contrasena);
+
           // Si el resultado es true, significa que ya autenticó con huella
           // y debemos navegar al dashboard
           shouldNavigateToDashboard = result ?? true;
@@ -184,26 +191,24 @@ class _CuotAppLoginCardState extends State<CuotAppLoginCard> {
 
         // Navegar al Dashboard si es necesario
         if (shouldNavigateToDashboard && mounted) {
-          Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (context) => 
-              DashboardScreen(
-                correo: correo, 
-                userName: nombre
-              )),
-          (Route<dynamic> route) => false);
+          Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(
+                  builder: (context) =>
+                      DashboardScreen(correo: correo, userName: nombre)),
+              (Route<dynamic> route) => false);
         }
       } else {
         throw Exception('Contraseña incorrecta');
       }
-
     } catch (e) {
       print('❌ Error en login: $e');
-      
+
       if (mounted) {
         setState(() {
           _errorMessage = e.toString().replaceAll('Exception:', '');
           _isLoading = false;
         });
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('❌ ${e.toString().replaceAll('Exception:', '')}'),
@@ -215,7 +220,8 @@ class _CuotAppLoginCardState extends State<CuotAppLoginCard> {
   }
 
   // Diálogo para habilitar biometría - VERSIÓN CORREGIDA
-  Future<bool?> _showEnableBiometricDialog(BuildContext context, String email, String password) async {
+  Future<bool?> _showEnableBiometricDialog(
+      BuildContext context, String email, String password) async {
     // Primero preguntamos si quiere habilitar
     final shouldEnable = await showDialog<bool>(
       context: context,
@@ -227,9 +233,8 @@ class _CuotAppLoginCardState extends State<CuotAppLoginCard> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              '¿Quieres habilitar la autenticación con huella dactilar '
-              'para acceder más rápido en el futuro?'
-            ),
+                '¿Quieres habilitar la autenticación con huella dactilar '
+                'para acceder más rápido en el futuro?'),
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(12),
@@ -244,7 +249,8 @@ class _CuotAppLoginCardState extends State<CuotAppLoginCard> {
                   Expanded(
                     child: Text(
                       'Podrás iniciar sesión con tu huella sin necesidad de escribir tu contraseña',
-                      style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                      style:
+                          TextStyle(fontSize: 12, color: Colors.grey.shade700),
                     ),
                   ),
                 ],
@@ -276,7 +282,7 @@ class _CuotAppLoginCardState extends State<CuotAppLoginCard> {
 
     // Verificar disponibilidad de biometría
     final isAvailable = await _biometricService.isBiometricAvailable();
-    
+
     if (!isAvailable) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -302,16 +308,17 @@ class _CuotAppLoginCardState extends State<CuotAppLoginCard> {
 
     // Autenticar con biometría
     try {
-      final authenticated = await _biometricService.authenticateWithBiometrics();
-      
+      final authenticated =
+          await _biometricService.authenticateWithBiometrics();
+
       if (authenticated) {
         await _biometricService.saveBiometricCredentials(email, password);
-        
+
         // Actualizar estado para mostrar el botón
         setState(() {
           _showBiometricButton = true;
         });
-        
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -354,7 +361,7 @@ class _CuotAppLoginCardState extends State<CuotAppLoginCard> {
 
     try {
       final isAvailable = await _biometricService.isBiometricAvailable();
-      
+
       if (!isAvailable) {
         _showSnackBar('❌ Biometría no disponible', Colors.orange);
         setState(() {
@@ -364,11 +371,10 @@ class _CuotAppLoginCardState extends State<CuotAppLoginCard> {
       }
 
       final credentials = await _biometricService.getBiometricCredentials();
-      
-      if (credentials['enabled'] != 'true' || 
-          credentials['email'] == null || 
+
+      if (credentials['enabled'] != 'true' ||
+          credentials['email'] == null ||
           credentials['password'] == null) {
-        
         _showSnackBar('❌ No hay credenciales guardadas', Colors.orange);
         setState(() {
           _showBiometricButton = false;
@@ -379,8 +385,9 @@ class _CuotAppLoginCardState extends State<CuotAppLoginCard> {
       // Mostrar mensaje para colocar la huella
       _showSnackBar('👆 Coloca tu huella en el sensor', Colors.blue);
 
-      final authenticated = await _biometricService.authenticateWithBiometrics();
-      
+      final authenticated =
+          await _biometricService.authenticateWithBiometrics();
+
       if (authenticated) {
         await _iniciarSesion(
           email: credentials['email']!,
@@ -389,7 +396,6 @@ class _CuotAppLoginCardState extends State<CuotAppLoginCard> {
       } else {
         _showSnackBar('❌ Autenticación fallida', Colors.red);
       }
-
     } catch (e) {
       print('Error en login biométrico: $e');
       _showSnackBar('❌ Error: ${e.toString()}', Colors.red);
@@ -467,9 +473,9 @@ class _CuotAppLoginCardState extends State<CuotAppLoginCard> {
           Text(
             'Inicia sesión',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: Colors.grey[900],
-            ),
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[900],
+                ),
           ),
           const SizedBox(height: 16),
 
@@ -567,7 +573,8 @@ class _CuotAppLoginCardState extends State<CuotAppLoginCard> {
                             width: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(Colors.white),
                             ),
                           )
                         : const Text(
@@ -580,13 +587,13 @@ class _CuotAppLoginCardState extends State<CuotAppLoginCard> {
                   ),
                 ),
               ),
-              
               if (_showBiometricButton) ...[
                 const SizedBox(width: 10),
                 SizedBox(
                   height: 48,
                   child: FloatingActionButton(
-                    onPressed: _isBiometricLoading ? null : _loginWithBiometrics,
+                    onPressed:
+                        _isBiometricLoading ? null : _loginWithBiometrics,
                     backgroundColor: widget.primaryGreen.withOpacity(0.1),
                     child: _isBiometricLoading
                         ? const SizedBox(
@@ -594,7 +601,8 @@ class _CuotAppLoginCardState extends State<CuotAppLoginCard> {
                             width: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(Colors.blue),
                             ),
                           )
                         : Icon(
@@ -611,7 +619,7 @@ class _CuotAppLoginCardState extends State<CuotAppLoginCard> {
           const SizedBox(height: 16),
 
           // Botón para eliminar huella (solo para pruebas)
-         /* if (_showBiometricButton)
+          /* if (_showBiometricButton)
             Center(
               child: TextButton.icon(
                 onPressed: _eliminarHuella,
