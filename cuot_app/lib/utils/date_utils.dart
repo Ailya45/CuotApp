@@ -93,6 +93,11 @@ class DateUt {
     
     final diasRestantes = fin.difference(fechaMesesCompletos).inDays;
     
+    // Si no hay meses completos, solo mostrar días
+    if (meses == 0) {
+      return '$diasRestantes ${diasRestantes == 1 ? 'día' : 'días'}';
+    }
+
     String resultado = '$meses ${meses == 1 ? 'mes' : 'meses'}';
     if (diasRestantes > 0) {
       resultado += ' y $diasRestantes ${diasRestantes == 1 ? 'día' : 'días'}';
