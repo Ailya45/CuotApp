@@ -88,6 +88,7 @@ class _SeguimientoCreditosPageState extends State<SeguimientoCreditosPage> {
                 (c['costo_inversion'] + c['margen_ganancia']).toDouble(),
             fechaLimite:
                 DateTime.parse(c['fecha_vencimiento'] ?? c['fecha_inicio']),
+            fechaInicio: c['fecha_inicio'] != null ? DateTime.parse(c['fecha_inicio']) : null,
             tipoPago: TipoPagoUnico.unico,
             descripcion: c['concepto'],
             pagosRealizados: pagos,
@@ -520,7 +521,7 @@ class _SeguimientoCreditosPageState extends State<SeguimientoCreditosPage> {
           ventanaActiva: 'Cuotas Personales',
         ),
         appBar: AppBar(
-          title: const Text('Seguimiento de Créditos'),
+          title: const Text('Seguimiento de Cuotas'),
           backgroundColor: AppColors.primaryGreen,
           foregroundColor: Colors.white,
           elevation: 0,

@@ -53,7 +53,7 @@ class _CreditoPageState extends State<CreditoPage> {
       value: _controller,
       child: Scaffold(
         appBar: AppBar(
-          title: Text(widget.creditoIdEditar != null ? 'Editar Financiamiento' : 'Gestión de Financiamientos'),
+          title: Text(widget.creditoIdEditar != null ? 'Editar Financiamiento' : 'Gestión de Cuotas'),
           centerTitle: true,
         ),
         body: _isLoading 

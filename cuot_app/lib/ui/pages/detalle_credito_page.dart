@@ -227,7 +227,7 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
                     final pago = rawPagos[index];
                     return ListTile(
                       leading: const Icon(Icons.payment, color: AppColors.primaryGreen),
-                      title: Text('Pago de la cuota #${pago['numero_cuota']}'),
+                      title: Text(_credito!['tipo_credito'] == 'unico' ? 'Abono' : 'Pago de la cuota #${pago['numero_cuota']}'),
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [

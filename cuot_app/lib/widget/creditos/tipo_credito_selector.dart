@@ -15,7 +15,7 @@ class TipoCreditoSelector extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            '¿Qué tipo de financiamiento deseas crear?',
+            '¿Qué tipo de cuota deseas crear?',
             style: Theme.of(context).textTheme.headlineSmall,
             textAlign: TextAlign.center,
           ),

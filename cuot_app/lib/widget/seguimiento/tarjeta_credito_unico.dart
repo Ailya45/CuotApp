@@ -36,9 +36,21 @@ class _TarjetaCreditoUnicoState extends State<TarjetaCreditoUnico> {
     return diferencia > 0 ? diferencia : 0;
   }
 
+  int get _diasAtrasoTotal {
+    if (widget.credito.fechaInicio == null) return 0;
+    final hoy = DateTime.now();
+    final inicio = widget.credito.fechaInicio!;
+    final diferencia = hoy.difference(inicio).inDays;
+    return diferencia > 0 ? diferencia : 0;
+  }
+
   String get _textoDiasRestantes {
     if (widget.credito.estaPagado) return 'Pagado';
-    if (widget.credito.estaVencido) return 'Vencido';
+    if (widget.credito.estaVencido) {
+      final atraso = _diasAtrasoTotal;
+      if (atraso > 0) return '$atraso días de atraso';
+      return 'Vencido';
+    }
     if (_diasRestantes == 0) return 'Último día';
     return '$_diasRestantes días restantes';
   }
@@ -200,18 +212,6 @@ class _TarjetaCreditoUnicoState extends State<TarjetaCreditoUnico> {
                                 ],
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            IconButton(
-                              icon: Icon(
-                                Icons.visibility_outlined,
-                                color: AppColors.info,
-                                size: 20,
-                              ),
-                              onPressed: widget.onVerDetalle,
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                              tooltip: 'Ver Detalle',
-                            ),
                           ],
                         ),
                       ],
@@ -250,64 +250,6 @@ class _TarjetaCreditoUnicoState extends State<TarjetaCreditoUnico> {
                     
                     const SizedBox(height: 16),
                     
-                    // Barra de progreso
-                    Column(
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.trending_up,
-                                  size: 14,
-                                  color: Colors.grey.shade600,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'Progreso de pago',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey.shade600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: widget.credito.estadoColor.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                '${(widget.credito.progreso * 100).toStringAsFixed(1)}%',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  color: widget.credito.estadoColor,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        LinearProgressIndicator(
-                          value: widget.credito.progreso.clamp(0.0, 1.0),
-                          backgroundColor: Colors.grey.shade200,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            widget.credito.estadoColor,
-                          ),
-                          minHeight: 8,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      ],
-                    ),
-                    
-                    const SizedBox(height: 12),
-                    
                     // Grid de montos
                     Row(
                       children: [
@@ -329,6 +271,87 @@ class _TarjetaCreditoUnicoState extends State<TarjetaCreditoUnico> {
                           widget.credito.saldoPendiente > 0 
                               ? AppColors.warning 
                               : AppColors.success,
+                        ),
+                      ],
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Barra de progreso y Ojo
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.trending_up,
+                                        size: 14,
+                                        color: Colors.grey.shade600,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'Progreso de pago',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: widget.credito.estadoColor.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      '${(widget.credito.progreso * 100).toStringAsFixed(1)}%',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: widget.credito.estadoColor,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              LinearProgressIndicator(
+                                value: widget.credito.progreso.clamp(0.0, 1.0),
+                                backgroundColor: Colors.grey.shade200,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  widget.credito.estadoColor,
+                                ),
+                                minHeight: 8,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.info.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: IconButton(
+                            icon: const Icon(
+                              Icons.visibility_outlined,
+                              color: AppColors.info,
+                              size: 24,
+                            ),
+                            onPressed: widget.onVerDetalle,
+                            tooltip: 'Ver Detalle',
+                          ),
                         ),
                       ],
                     ),

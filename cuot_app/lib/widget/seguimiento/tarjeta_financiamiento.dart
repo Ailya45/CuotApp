@@ -81,7 +81,6 @@ class _TarjetaFinanciamientoState extends State<TarjetaFinanciamiento> {
   }
 
   int get _cuotasPagadasCount => widget.cuotas.where((c) => c.pagada).length;
-  int get _cuotasPendientesCount => widget.cuotas.where((c) => !c.pagada).length;
 
   @override
   Widget build(BuildContext context) {
@@ -205,18 +204,6 @@ class _TarjetaFinanciamientoState extends State<TarjetaFinanciamiento> {
                             ],
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          icon: Icon(
-                            Icons.visibility_outlined,
-                            color: AppColors.info,
-                            size: 20,
-                          ),
-                          onPressed: widget.onVerDetalle,
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          tooltip: 'Ver Detalle',
-                        ),
                       ],
                     ),
                     
@@ -229,12 +216,6 @@ class _TarjetaFinanciamientoState extends State<TarjetaFinanciamiento> {
                           'Pagadas',
                           '$_cuotasPagadasCount',
                           AppColors.success,
-                        ),
-                        const SizedBox(width: 8),
-                        _buildMiniEstadistica(
-                          'Pendientes',
-                          '$_cuotasPendientesCount',
-                          AppColors.warning,
                         ),
                         const SizedBox(width: 8),
                         _buildMiniEstadistica(
@@ -253,39 +234,6 @@ class _TarjetaFinanciamientoState extends State<TarjetaFinanciamiento> {
                     ),
                     
                     const SizedBox(height: 12),
-                    
-                    // Barra de progreso simplificada
-                    Column(
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'Progreso',
-                              style: TextStyle(fontSize: 12, color: Colors.grey),
-                            ),
-                            Text(
-                              '${(widget.progreso * 100).toStringAsFixed(1)}%',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: _estadoColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        LinearProgressIndicator(
-                          value: widget.progreso.clamp(0.0, 1.0),
-                          backgroundColor: Colors.grey.shade200,
-                          valueColor: AlwaysStoppedAnimation<Color>(_estadoColor),
-                          minHeight: 6,
-                          borderRadius: BorderRadius.circular(3),
-                        ),
-                      ],
-                    ),
-                    
-                    const SizedBox(height: 8),
                     
                     // Mensaje de estado mejorado
                     Row(
@@ -323,6 +271,62 @@ class _TarjetaFinanciamientoState extends State<TarjetaFinanciamiento> {
                               ),
                             ),
                           ),
+                      ],
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Barra de progreso y Ojo
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text(
+                                    'Progreso',
+                                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                                  ),
+                                  Text(
+                                    '${(widget.progreso * 100).toStringAsFixed(1)}%',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: _estadoColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              LinearProgressIndicator(
+                                value: widget.progreso.clamp(0.0, 1.0),
+                                backgroundColor: Colors.grey.shade200,
+                                valueColor: AlwaysStoppedAnimation<Color>(_estadoColor),
+                                minHeight: 6,
+                                borderRadius: BorderRadius.circular(3),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.info.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: IconButton(
+                            icon: const Icon(
+                              Icons.visibility_outlined,
+                              color: AppColors.info,
+                              size: 24,
+                            ),
+                            onPressed: widget.onVerDetalle,
+                            tooltip: 'Ver Detalle',
+                          ),
+                        ),
                       ],
                     ),
                   ],

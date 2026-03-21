@@ -16,6 +16,7 @@ class CreditoUnico {
   final String concepto;
   final double montoTotal;
   final DateTime fechaLimite;
+  final DateTime? fechaInicio;
   final TipoPagoUnico tipoPago;
   final List<Pago> pagosRealizados;
   
@@ -30,6 +31,7 @@ class CreditoUnico {
     required this.concepto,
     required this.montoTotal,
     required this.fechaLimite,
+    this.fechaInicio,
     required this.tipoPago,
     this.pagosRealizados = const [],
     this.descripcion,
