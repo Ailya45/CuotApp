@@ -122,7 +122,7 @@ class _SeguimientoCreditosPageState extends State<SeguimientoCreditosPage> {
     }
   }
 
-  String _filtroEstado = 'al día';
+  String _filtroEstado = 'atrasado';
   String _busqueda = '';
   final TextEditingController _searchController = TextEditingController();
 
@@ -204,7 +204,11 @@ class _SeguimientoCreditosPageState extends State<SeguimientoCreditosPage> {
 
       bool matchesEstado = true;
       if (_filtroEstado != 'todos') {
-        matchesEstado = estado == _filtroEstado.toLowerCase();
+        if (_filtroEstado == 'atrasado') {
+          matchesEstado = estado == 'atrasado' || estado == 'vencido';
+        } else {
+          matchesEstado = estado == _filtroEstado.toLowerCase();
+        }
       }
 
       return matchesBusqueda && matchesEstado;
@@ -225,6 +229,8 @@ class _SeguimientoCreditosPageState extends State<SeguimientoCreditosPage> {
         return AppColors.mediumGrey;
     }
   }
+
+
 
   double getMontoRestanteCuota(int financiamientoIndex, int numeroCuota) {
     final f = _financiamientos[financiamientoIndex];
@@ -388,7 +394,7 @@ class _SeguimientoCreditosPageState extends State<SeguimientoCreditosPage> {
   }
 
   Widget _buildFiltros() {
-    final filtros = ['todos', 'al día', 'atrasado', 'pagado'];
+    final filtros = ['atrasado', 'al día', 'pagado', 'todos'];
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -398,12 +404,18 @@ class _SeguimientoCreditosPageState extends State<SeguimientoCreditosPage> {
           final isSelected = _filtroEstado == filtro;
           final color = _getColorParaFiltro(filtro);
 
+          String nombreFiltro = filtro;
+          if (filtro == 'todos') nombreFiltro = 'Todos';
+          else if (filtro == 'atrasado') nombreFiltro = 'Vencidos';
+          else if (filtro == 'al día') nombreFiltro = 'Al día';
+          else if (filtro == 'pagado') nombreFiltro = 'Pagados';
+
           return Padding(
             padding: const EdgeInsets.only(right: 8),
             child: FilterChip(
               selected: isSelected,
               label: Text(
-                filtro == 'todos' ? 'Todos' : filtro,
+                nombreFiltro,
                 style: TextStyle(
                   color: isSelected ? Colors.white : color,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
