@@ -588,28 +588,51 @@ class _CuotAppLoginCardState extends State<CuotAppLoginCard> {
                 ),
               ),
               if (_showBiometricButton) ...[
-                const SizedBox(width: 10),
-                SizedBox(
-                  height: 48,
-                  child: FloatingActionButton(
-                    onPressed:
-                        _isBiometricLoading ? null : _loginWithBiometrics,
-                    backgroundColor: widget.primaryGreen.withOpacity(0.1),
-                    child: _isBiometricLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor:
-                                  AlwaysStoppedAnimation<Color>(Colors.blue),
+                const SizedBox(width: 12),
+                // Botón de Biometría Premium
+                GestureDetector(
+                  onTap: _isBiometricLoading ? null : _loginWithBiometrics,
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          widget.primaryGreen.withOpacity(0.2),
+                          widget.primaryGreen.withOpacity(0.05),
+                        ],
+                      ),
+                      border: Border.all(
+                        color: widget.primaryGreen.withOpacity(0.1),
+                        width: 1,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: widget.primaryGreen.withOpacity(0.08),
+                          blurRadius: 12,
+                          spreadRadius: 2,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: _isBiometricLoading
+                          ? const SizedBox(
+                              height: 24,
+                              width: 24,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                              ),
+                            )
+                          : Icon(
+                              Icons.fingerprint_rounded,
+                              color: widget.primaryGreen,
+                              size: 30,
                             ),
-                          )
-                        : Icon(
-                            Icons.fingerprint,
-                            color: widget.primaryGreen,
-                            size: 28,
-                          ),
+                    ),
                   ),
                 ),
               ],

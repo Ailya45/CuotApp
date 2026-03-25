@@ -8,6 +8,7 @@ class SelectorFechasCuotasCompacto extends StatefulWidget {
   final DateTime fechaInicio;
   final double montoPorCuota;
   final double precioTotalEsperado; // 👈 NUEVO: precio total esperado
+  final List<CuotaPersonalizada>? initialCuotas; // 👈 NUEVO: cuotas ya existentes
   final Function(List<CuotaPersonalizada>) onFechasSeleccionadas;
 
   const SelectorFechasCuotasCompacto({
@@ -16,6 +17,7 @@ class SelectorFechasCuotasCompacto extends StatefulWidget {
     required this.fechaInicio,
     required this.montoPorCuota,
     required this.precioTotalEsperado, // 👈 NUEVO
+    this.initialCuotas,
     required this.onFechasSeleccionadas,
   });
 
@@ -46,14 +48,40 @@ class _SelectorFechasCuotasCompactoState extends State<SelectorFechasCuotasCompa
   }
 
   void _inicializarCuotas() {
-    _cuotas = List.generate(widget.numeroCuotas, (index) {
-      return CuotaPersonalizada(
-        numeroCuota: index + 1,
-        fechaPago: widget.fechaInicio.add(Duration(days: 30 * (index + 1))),
-        monto: widget.montoPorCuota,
-      );
-    });
-    _cuotasModificadas = List.generate(widget.numeroCuotas, (index) => false);
+    if (widget.initialCuotas != null && widget.initialCuotas!.isNotEmpty) {
+      // Si recibimos cuotas iniciales, las usamos
+      _cuotas = List.from(widget.initialCuotas!);
+      
+      // Ajustar si el número de cuotas cambió
+      if (_cuotas.length < widget.numeroCuotas) {
+        // Añadir nuevas cuotas al final
+        final diff = widget.numeroCuotas - _cuotas.length;
+        final ultimaFecha = _cuotas.last.fechaPago;
+        
+        for (int i = 0; i < diff; i++) {
+          _cuotas.add(CuotaPersonalizada(
+            numeroCuota: _cuotas.length + 1,
+            fechaPago: ultimaFecha.add(Duration(days: 30 * (i + 1))),
+            monto: widget.montoPorCuota,
+          ));
+        }
+      } else if (_cuotas.length > widget.numeroCuotas) {
+        // Quitar cuotas del final (pero no permitir quitar bloqueadas)
+        final numBloqueadas = _cuotas.where((c) => c.bloqueada).length;
+        final targetCount = widget.numeroCuotas < numBloqueadas ? numBloqueadas : widget.numeroCuotas;
+        _cuotas = _cuotas.take(targetCount).toList();
+      }
+    } else {
+      // Generación por defecto
+      _cuotas = List.generate(widget.numeroCuotas, (index) {
+        return CuotaPersonalizada(
+          numeroCuota: index + 1,
+          fechaPago: widget.fechaInicio.add(Duration(days: 30 * (index + 1))),
+          monto: widget.montoPorCuota,
+        );
+      });
+    }
+    _cuotasModificadas = List.generate(_cuotas.length, (index) => false);
   }
 
   void _actualizarCuota(CuotaPersonalizada cuotaEditada) {
@@ -187,7 +215,7 @@ class _SelectorFechasCuotasCompactoState extends State<SelectorFechasCuotasCompa
                     border: Border.all(color: Colors.red.shade200),
                   ),
                   child: Text(
-                    '${_diferencia > 0 ? "+" : ""}\$${_diferencia.toStringAsFixed(2)}',
+                    '${_diferencia > 0 ? "Sobran" : "Faltan"}: \$${_diferencia.abs().toStringAsFixed(2)}',
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.bold,

@@ -115,6 +115,25 @@ class CreditService {
             })
             .eq('credito_id', creditId)
             .eq('numero_cuota', numeroCuota);
+
+        // 4. Sincronizar estado del crédito si está totalmente pagado
+        if (pagada) {
+          final List<dynamic> allCuotas = await _supabase.client
+              .schema('Financiamientos')
+              .from('Cuotas')
+              .select('pagada')
+              .eq('credito_id', creditId);
+          
+          final bool todoPagado = allCuotas.every((c) => c['pagada'] == true);
+          
+          if (todoPagado) {
+            await _supabase.client
+                .schema('Financiamientos')
+                .from('Creditos')
+                .update({'estado': 'Pagado'})
+                .eq('id', creditId);
+          }
+        }
       }
 
       // Invalidar caché para que la próxima carga traiga datos frescos
@@ -184,6 +203,24 @@ class CreditService {
           .eq('credito_id', creditId)
           .eq('numero_cuota', 1);
 
+      // 3. Sincronizar estado del crédito
+      if (nuevoSaldo <= 0) {
+        await _supabase.client
+            .schema('Financiamientos')
+            .from('Creditos')
+            .update({'estado': 'Pagado'})
+            .eq('id', creditId);
+      }
+
+      // 3. Sincronizar estado del crédito
+      if (nuevoSaldo <= 0) {
+        await _supabase.client
+            .schema('Financiamientos')
+            .from('Creditos')
+            .update({'estado': 'Pagado'})
+            .eq('id', creditId);
+      }
+
       invalidateCache();
     } catch (e) {
       print('Error en updateCreditUnico: $e');
@@ -230,10 +267,106 @@ class CreditService {
             .insert(cuotasToInsert);
       }
 
+      // 4. Verificar si quedó totalmente pagado (por si acaso el monto fue 0)
+      final todasCuotas = await _supabase.client
+          .schema('Financiamientos')
+          .from('Cuotas')
+          .select('pagada')
+          .eq('credito_id', creditId);
+      
+      final bool estaPagado = todasCuotas.isEmpty || todasCuotas.every((c) => c['pagada'] == true);
+      if (estaPagado) {
+        await _supabase.client
+            .schema('Financiamientos')
+            .from('Creditos')
+            .update({'estado': 'Pagado'})
+            .eq('id', creditId);
+      }
+
       invalidateCache();
     } catch (e) {
       print('Error en updateCreditCuotas: $e');
       rethrow;
+    }
+  }
+
+  /// 🛠️ MÉDICO DE DATOS: Repara duplicados y descuadres en las cuotas
+  /// Busca cuotas con el mismo número para un crédito y elimina las redundantes.
+  Future<void> repairDuplicateCuotas(String usuarioNombre) async {
+    try {
+      // 1. Obtener todos los créditos del usuario (datos frescos)
+      final rawCredits = await getFullCreditsData(usuarioNombre, forceRefresh: true);
+      
+      bool huboCambios = false;
+
+      for (var credit in rawCredits) {
+        final creditId = credit['id'].toString();
+        final List<dynamic> cuotas = List.from(credit['Cuotas'] ?? []);
+        if (cuotas.isEmpty) continue;
+        
+        // Agrupar por numero_cuota
+        final Map<int, List<dynamic>> grouped = {};
+        for (var c in cuotas) {
+          final n = c['numero_cuota'] as int;
+          grouped.putIfAbsent(n, () => []).add(c);
+        }
+        
+        // Identificar y limpiar duplicados
+        for (var numeroCuota in grouped.keys) {
+          final list = grouped[numeroCuota]!;
+          if (list.length > 1) {
+            print('--- REPARANDO: Crédito $creditId, Cuota $numeroCuota ---');
+            
+            // Decidir cuál conservar:
+            // 1. La que esté pagada (prioridad absoluta)
+            // 2. La que tenga mayor monto (si ninguna está pagada)
+            // 3. Si una tiene monto 0 y es duplicada de una con monto, borrar la de 0
+            list.sort((a, b) {
+              if (a['pagada'] == true && b['pagada'] == false) return -1;
+              if (a['pagada'] == false && b['pagada'] == true) return 1;
+              // Si ambas son pagadas o ambas no, preferir mayor monto
+              return (b['monto'] as num).compareTo(a['monto'] as num);
+            });
+            
+            // Los ids de las cuotas a eliminar (todas menos la primera de la lista sorted)
+            final idsToDelete = list.skip(1).map((c) => c['id']).toList();
+            
+            for (var cuotaId in idsToDelete) {
+              await _supabase.client
+                  .schema('Financiamientos')
+                  .from('Cuotas')
+                  .delete()
+                  .eq('id', cuotaId);
+              huboCambios = true;
+            }
+          }
+        }
+
+        // 2. Sincronizar el campo 'numero_cuotas' del crédito maestro
+        // Si el usuario editó y quedaron cuotas huérfanas o duplicadas, 
+        // el total de cuotas reales podría ser distinto al guardado.
+        final response = await _supabase.client
+            .schema('Financiamientos')
+            .from('Cuotas')
+            .select('id')
+            .eq('credito_id', creditId);
+        
+        final totalReal = response.length;
+        if (totalReal != (credit['numero_cuotas'] as int)) {
+          await _supabase.client
+              .schema('Financiamientos')
+              .from('Creditos')
+              .update({'numero_cuotas': totalReal})
+              .eq('id', creditId);
+          huboCambios = true;
+        }
+      }
+
+      if (huboCambios) {
+        invalidateCache();
+      }
+    } catch (e) {
+      print('Error en repairDuplicateCuotas: $e');
     }
   }
 

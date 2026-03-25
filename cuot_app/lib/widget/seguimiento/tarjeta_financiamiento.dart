@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cuot_app/theme/app_colors.dart';
 import 'package:cuot_app/Model/cuota_personalizada.dart';
 import 'package:cuot_app/Model/pago_model.dart';
+import 'package:cuot_app/service/whatsapp_service.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart'; // 👈 NUEVO
 
 class TarjetaFinanciamiento extends StatefulWidget {
@@ -18,6 +19,8 @@ class TarjetaFinanciamiento extends StatefulWidget {
   final List<Pago> pagos;
   final String concepto;
   final double totalCredito; // 👈 NUEVO
+  final String? creditoId;
+  final String modalidadPago; // 👈 NUEVO: Recibe la modalidad real (Diario, Semanal, etc.)
   final Function(int) onCuotaTap;
   final VoidCallback? onEditar;
   final VoidCallback? onEliminar;
@@ -37,6 +40,8 @@ class TarjetaFinanciamiento extends StatefulWidget {
     required this.pagos,
     required this.concepto,
     required this.totalCredito, // 👈 NUEVO
+    required this.modalidadPago, // 👈 NUEVO
+    this.creditoId,
     required this.onCuotaTap,
     required this.onVerDetalle,
     this.onEditar,
@@ -49,6 +54,27 @@ class TarjetaFinanciamiento extends StatefulWidget {
 
 class _TarjetaFinanciamientoState extends State<TarjetaFinanciamiento> {
   bool _mostrarRegistroPagos = false;
+
+  void _enviarWhatsApp() {
+    final mensaje = WhatsappService.generarFichaCuotas(
+      creditoId: widget.creditoId ?? '0',
+      nombreCliente: widget.nombreCliente.trim(),
+      concepto: widget.concepto.trim(),
+      modalidadPago: widget.modalidadPago, // 👈 MODIFICADO: Usa la modalidad real
+      montoTotal: widget.totalCredito,
+      totalPagado: widget.totalPagado,
+      saldoPendiente: widget.totalPendiente,
+      totalCuotas: widget.cuotas.length,
+      cuotasPagadas: widget.cuotas.where((c) => c.pagada).length,
+      cuotasVencidas: widget.cuotasVencidas,
+      montoCuota: widget.montoCuota,
+    );
+    WhatsappService.abrirWhatsApp(
+      telefono: widget.telefono,
+      mensaje: mensaje,
+    );
+  }
+
 
   Color get _estadoColor {
     switch (widget.estado.toLowerCase()) {
@@ -118,6 +144,7 @@ class _TarjetaFinanciamientoState extends State<TarjetaFinanciamiento> {
                   children: [
                     // Fila: Nombre, estado y flecha
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
                           child: Column(
@@ -133,31 +160,35 @@ class _TarjetaFinanciamientoState extends State<TarjetaFinanciamiento> {
                                 overflow: TextOverflow.ellipsis,
                               ),
                               const SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    const Icon(Icons.phone, size: 14, color: Colors.grey),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      widget.telefono.isEmpty 
-                                          ? 'No tiene' 
-                                          : widget.telefono,
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        color: Colors.grey,
-                                        fontStyle: widget.telefono.isEmpty 
-                                            ? FontStyle.italic 
-                                            : FontStyle.normal,
+                                GestureDetector(
+                                  behavior: HitTestBehavior.opaque,
+                                  onTap: widget.telefono.isNotEmpty ? _enviarWhatsApp : null,
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.phone, size: 14, color: Colors.grey),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        widget.telefono.isEmpty 
+                                            ? 'No tiene' 
+                                            : widget.telefono,
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: Colors.grey,
+                                          fontStyle: widget.telefono.isEmpty 
+                                              ? FontStyle.italic 
+                                              : FontStyle.normal,
+                                        ),
                                       ),
-                                    ),
-                                    if (widget.telefono.isNotEmpty) ...[
-                                      const SizedBox(width: 8),
-                                      const FaIcon(
-                                        FontAwesomeIcons.whatsapp,
-                                        size: 14,
-                                        color: Colors.green,
-                                      ),
+                                      if (widget.telefono.isNotEmpty) ...[
+                                        const SizedBox(width: 8),
+                                        const FaIcon(
+                                          FontAwesomeIcons.whatsapp,
+                                          size: 14,
+                                          color: Colors.green,
+                                        ),
+                                      ],
                                     ],
-                                  ],
+                                  ),
                                 ),
                                 const SizedBox(height: 4),
                                 Row(
@@ -225,7 +256,13 @@ class _TarjetaFinanciamientoState extends State<TarjetaFinanciamiento> {
                         ),
                         const SizedBox(width: 8),
                         _buildMiniEstadistica(
-                          'Monto Total',
+                          'Restantes',
+                          '${widget.cuotas.length - _cuotasPagadasCount}',
+                          Colors.amber,
+                        ),
+                        const Spacer(),
+                        _buildMiniEstadistica(
+                          'Total',
                           '\$${widget.totalCredito.toStringAsFixed(2)}',
                           AppColors.primaryGreen,
                           isProminent: true,
@@ -238,7 +275,6 @@ class _TarjetaFinanciamientoState extends State<TarjetaFinanciamiento> {
                     // Mensaje de estado mejorado
                     Row(
                       children: [
-                        Icon(_estadoIcon, size: 14, color: _estadoColor),
                         const SizedBox(width: 4),
                         Expanded(
                           child: Text(
@@ -312,6 +348,7 @@ class _TarjetaFinanciamientoState extends State<TarjetaFinanciamiento> {
                           ),
                         ),
                         const SizedBox(width: 12),
+                        // Botón de acción (Ver Detalle)
                         Container(
                           decoration: BoxDecoration(
                             color: AppColors.info.withOpacity(0.1),
@@ -321,7 +358,7 @@ class _TarjetaFinanciamientoState extends State<TarjetaFinanciamiento> {
                             icon: const Icon(
                               Icons.visibility_outlined,
                               color: AppColors.info,
-                              size: 24,
+                              size: 22,
                             ),
                             onPressed: widget.onVerDetalle,
                             tooltip: 'Ver Detalle',
@@ -335,74 +372,88 @@ class _TarjetaFinanciamientoState extends State<TarjetaFinanciamiento> {
             ),
             
             // Sección expandible de Registro de Pagos
-            if (_mostrarRegistroPagos) ...[
-              const Divider(height: 1),
-              Container(
-                padding: const EdgeInsets.all(16),
-                color: Colors.grey.shade50,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+            AnimatedSize(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              child: _mostrarRegistroPagos 
+                ? Column(
                   children: [
-                    // Título de la sección
-                    Row(
-                      children: [
-                        const Text(
-                          'Registro de Pagos',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
+                    const Divider(height: 1),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: const BorderRadius.only(
+                          bottomLeft: Radius.circular(16),
+                          bottomRight: Radius.circular(16),
                         ),
-                        const Spacer(),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Título de la sección
+                          Row(
+                            children: [
+                              const Text(
+                                'Registro de Pagos',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const Spacer(),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade200,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  '$_cuotasPagadasCount/${widget.cuotas.length}',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade200,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            '$_cuotasPagadasCount/${widget.cuotas.length}',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
+                          
+                          const SizedBox(height: 16),
+                          
+                          // Cuotas en horizontal (UNA SOLA FILA)
+                          SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children: widget.cuotas.map((cuota) {
+                                return _buildCuotaHorizontal(cuota);
+                              }).toList(),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                    
-                    const SizedBox(height: 16),
-                    
-                    // Cuotas en horizontal (UNA SOLA FILA)
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: widget.cuotas.map((cuota) {
-                          return _buildCuotaHorizontal(cuota);
-                        }).toList(),
+                          
+                          const SizedBox(height: 12),
+                          
+                          // Leyenda de colores para las cuotas
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              _buildLeyendaColor(AppColors.success, 'Pagada'),
+                              const SizedBox(width: 16),
+                              _buildLeyendaColor(Colors.amber, 'Pendiente'),
+                              const SizedBox(width: 16),
+                              _buildLeyendaColor(AppColors.error, 'Vencida'),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
-                    
-                    const SizedBox(height: 8),
-                    
-                    // Leyenda de colores para las cuotas
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _buildLeyendaColor(AppColors.success, 'Pagada'),
-                        const SizedBox(width: 16),
-                        _buildLeyendaColor(AppColors.primaryGreen, 'Pendiente'),
-                        const SizedBox(width: 16),
-                        _buildLeyendaColor(AppColors.error, 'Vencida'),
-                      ],
-                    ),
                   ],
-                ),
-              ),
-            ],
+                )
+                : const SizedBox.shrink(),
+            ),
           ],
         ),
       ),
@@ -410,47 +461,67 @@ class _TarjetaFinanciamientoState extends State<TarjetaFinanciamiento> {
   }
 
   Widget _buildMiniEstadistica(String label, String valor, Color color, {bool isProminent = false}) {
-    return Expanded(
-      flex: isProminent ? 2 : 1,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
+    final content = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (!isProminent) ...[
           Container(
-            width: isProminent ? 10 : 8,
-            height: isProminent ? 10 : 8,
+            width: 8,
+            height: 8,
             decoration: BoxDecoration(
               color: color,
               shape: BoxShape.circle,
             ),
           ),
           const SizedBox(width: 4),
-          Flexible(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  valor,
-                  style: TextStyle(
-                    fontSize: isProminent ? 14 : 12,
-                    color: Colors.grey.shade800,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: isProminent ? 11 : 10,
-                    color: Colors.grey.shade600,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
         ],
-      ),
+        Flexible(
+          child: Column(
+            crossAxisAlignment: isProminent ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                valor,
+                style: TextStyle(
+                  fontSize: isProminent ? 14 : 12,
+                  color: isProminent ? color : Colors.grey.shade800,
+                  fontWeight: FontWeight.bold,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: isProminent ? 10 : 10,
+                  color: Colors.grey.shade600,
+                  fontWeight: isProminent ? FontWeight.w500 : FontWeight.normal,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+
+    if (isProminent) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: color.withOpacity(0.2),
+            width: 1,
+          ),
+        ),
+        child: content,
+      );
+    }
+
+    return Expanded(
+      flex: 1,
+      child: content,
     );
   }
 
@@ -468,8 +539,14 @@ class _TarjetaFinanciamientoState extends State<TarjetaFinanciamiento> {
     Color getColor() {
       if (pagada) return AppColors.success;
       if (vencida) return AppColors.error;
-      return AppColors.primaryGreen;
+      return Colors.amber;
     }
+    
+    final borderColor = pagada 
+        ? AppColors.success.withOpacity(0.3)
+        : vencida
+            ? AppColors.error.withOpacity(0.3)
+            : Colors.amber.withOpacity(0.5);
     
     return GestureDetector(
       onTap: pagada ? null : () => widget.onCuotaTap(cuota.numeroCuota),
@@ -485,8 +562,8 @@ class _TarjetaFinanciamientoState extends State<TarjetaFinanciamiento> {
                   : Colors.white,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: getColor().withOpacity(0.3),
-            width: 1,
+            color: borderColor,
+            width: !pagada && !vencida ? 1.5 : 1,
           ),
         ),
         child: Column(
@@ -518,7 +595,7 @@ class _TarjetaFinanciamientoState extends State<TarjetaFinanciamiento> {
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
-                          color: AppColors.primaryGreen,
+                          color: Colors.amber.shade700,
                         ),
                       ),
           ],
@@ -561,6 +638,16 @@ class _TarjetaFinanciamientoState extends State<TarjetaFinanciamiento> {
       case 'atrasado':
         return 'Tienes cuotas pendientes por pagar';
       case 'al día':
+        // Encontrar la próxima cuota no pagada
+        final proximaCuota = widget.cuotas.where((c) => !c.pagada).toList();
+        if (proximaCuota.isNotEmpty) {
+          proximaCuota.sort((a, b) => a.fechaPago.compareTo(b.fechaPago));
+          final hoy = DateTime.now();
+          final fechaNext = proximaCuota.first.fechaPago;
+          final diff = fechaNext.difference(hoy).inDays;
+          if (diff <= 0) return 'Hoy vence tu próxima cuota';
+          return 'Próxima cuota en $diff (días)';
+        }
         return 'Estás al día con tus pagos';
       default:
         return 'Revisa el estado de tus cuotas';

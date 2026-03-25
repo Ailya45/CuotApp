@@ -249,10 +249,11 @@ class _DialogoPagoCuotaCompletoState extends State<DialogoPagoCuotaCompleto>
                 ),
               ],
             ),
-            child: Column(
+            child: Stack(
               children: [
-                // Header ya no tiene barra superior (ELIMINADO)
-              Expanded(
+                Column(
+                  children: [
+                    Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(24),
                   child: Form(
@@ -1100,15 +1101,25 @@ class _DialogoPagoCuotaCompletoState extends State<DialogoPagoCuotaCompleto>
                           ],
                         ),
                       ],
-                    ),
-                  ),
-                ),
-              ),
+                    ), // Fin Inner Column
+                  ), // Fin Form
+                ), // Fin SingleChildScrollView
+              ), // Fin Expanded
             ],
-          ),
-        ),
-      ),
+            ), // Fin Main Column,
+            Positioned(
+              top: 10,
+              left: 10,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: AppColors.mediumGrey),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+          ],
+        ), // Fin Stack
+      ), // Fin Container
     ),
+  )
   );
 }
 

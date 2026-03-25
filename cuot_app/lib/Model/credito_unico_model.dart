@@ -62,8 +62,7 @@ class CreditoUnico {
   String get estado {
     if (estaPagado) return 'Pagado';
     if (estaVencido) return 'Vencido';
-    if (tipoPago == TipoPagoUnico.unico) return 'Pendiente';
-    return 'En Progreso';
+    return 'Al día';
   }
 
   Color get estadoColor {

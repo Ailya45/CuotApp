@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:cuot_app/service/credit_service.dart';
 import 'package:cuot_app/theme/app_colors.dart';
+import 'package:cuot_app/ui/pages/formulario_renovacion_page.dart';
 import 'package:intl/intl.dart';
 
 class DetalleCreditoPage extends StatefulWidget {
   final String creditoId;
+  final String? nombreUsuario;
   final VoidCallback? onEditar;
   final VoidCallback? onEliminar;
 
   const DetalleCreditoPage({
     super.key,
     required this.creditoId,
+    this.nombreUsuario,
     this.onEditar,
     this.onEliminar,
   });
@@ -81,6 +84,7 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
       totalPagado += (pago['monto'] as num).toDouble();
     }
     double saldoPendiente = totalCredito - totalPagado;
+    final bool isPagado = saldoPendiente <= 0.01;
 
     // Sort pagos by date
     rawPagos.sort((a, b) => DateTime.parse(b['fecha_pago_real'])
@@ -95,10 +99,17 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
         backgroundColor: AppColors.primaryGreen,
         foregroundColor: Colors.white,
         actions: [
-          if (widget.onEditar != null)
+          if (widget.onEditar != null && !isPagado)
             IconButton(
-              icon: const Icon(Icons.edit),
+              icon: const Icon(
+                Icons.edit_note_rounded,
+                color: Colors.white,
+                size: 28,
+              ),
               onPressed: () {
+                // No cerramos el detalle, solo navegamos a editar?
+                // El código original hacía Navigator.pop(context); widget.onEditar!();
+                // Eso está bien si queremos volver a la lista y abrir el editor.
                 Navigator.pop(context);
                 widget.onEditar!();
               },
@@ -106,7 +117,11 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
             ),
           if (widget.onEliminar != null)
             IconButton(
-              icon: const Icon(Icons.delete),
+              icon: const Icon(
+                Icons.delete_forever_rounded,
+                color: AppColors.error, // RED TRASH
+                size: 26,
+              ),
               onPressed: () {
                 Navigator.pop(context);
                 widget.onEliminar!();
@@ -152,7 +167,39 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Información', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Información', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => FormularioRenovacionPage(
+                                  creditoId: widget.creditoId,
+                                  nombreUsuario: widget.nombreUsuario ?? '',
+                                ),
+                              ),
+                            ).then((result) {
+                              if (result == true) _loadDetalle();
+                            });
+                          },
+                          icon: const Icon(Icons.autorenew, size: 16),
+                          label: const Text('Renovación'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.info,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            textStyle: const TextStyle(fontSize: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            elevation: 2,
+                          ),
+                        ),
+                      ],
+                    ),
                     const Divider(),
                     const SizedBox(height: 8),
                     _buildInfoRow(Icons.inventory, 'Concepto', _credito!['concepto'] ?? 'Sin concepto'),

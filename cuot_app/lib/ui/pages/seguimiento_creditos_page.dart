@@ -34,6 +34,9 @@ class _SeguimientoCreditosPageState extends State<SeguimientoCreditosPage> {
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
+      // 🛠️ REPARACIÓN: Limpiar duplicados antes de cargar
+      await _creditService.repairDuplicateCuotas(widget.nombreUsuario);
+
       // 🚀 OPTIMIZACIÓN: Una sola consulta para traer todo (N+1 fixed)
       final rawCredits =
           await _creditService.getFullCreditsData(widget.nombreUsuario);
@@ -107,6 +110,7 @@ class _SeguimientoCreditosPageState extends State<SeguimientoCreditosPage> {
             'cuotas': cuotas,
             'pagos': pagos,
             'pagosParciales': <int, double>{},
+            'modalidadPago': _getModalidadName(c['modalidad_pago']),
           });
         }
       }
@@ -119,6 +123,19 @@ class _SeguimientoCreditosPageState extends State<SeguimientoCreditosPage> {
     } catch (e) {
       print(' Error cargando créditos optimizados: $e');
       setState(() => _isLoading = false);
+    }
+  }
+
+  String _getModalidadName(dynamic index) {
+    if (index == null) return 'No especificada';
+    final idx = index is int ? index : int.tryParse(index.toString()) ?? 0;
+    switch (idx) {
+      case 0: return 'Diario';
+      case 1: return 'Semanal';
+      case 2: return 'Quincenal';
+      case 3: return 'Mensual';
+      case 4: return 'Personalizado';
+      default: return 'Desconocido';
     }
   }
 
@@ -639,6 +656,7 @@ class _SeguimientoCreditosPageState extends State<SeguimientoCreditosPage> {
                                       MaterialPageRoute(
                                         builder: (_) => DetalleCreditoPage(
                                           creditoId: item.id.toString(),
+                                          nombreUsuario: widget.nombreUsuario,
                                           onEditar: () {
                                             Navigator.push(
                                               context,
@@ -666,7 +684,9 @@ class _SeguimientoCreditosPageState extends State<SeguimientoCreditosPage> {
                                     getCuotasVencidas(originalIndex);
 
                                 return TarjetaFinanciamiento(
+                                  creditoId: item['id']?.toString(),
                                   nombreCliente: item['nombre'],
+                                  modalidadPago: item['modalidadPago'] ?? 'En Cuotas',
                                   telefono: item['telefono'],
                                   estado: item['estado'] ?? 'Pendiente',
                                   montoCuota: item['montoCuota'],
@@ -688,6 +708,7 @@ class _SeguimientoCreditosPageState extends State<SeguimientoCreditosPage> {
                                       MaterialPageRoute(
                                         builder: (_) => DetalleCreditoPage(
                                           creditoId: item['id'].toString(),
+                                          nombreUsuario: widget.nombreUsuario,
                                           onEditar: () {
                                             Navigator.push(
                                               context,

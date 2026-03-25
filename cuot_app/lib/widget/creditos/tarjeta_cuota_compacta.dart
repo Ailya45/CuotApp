@@ -25,6 +25,10 @@ class _TarjetaCuotaCompactaState extends State<TarjetaCuotaCompacta> {
   bool _isHovered = false; // Para efecto hover (web/desktop)
 
   Color _getBackgroundColor() {
+    if (widget.cuota.bloqueada) {
+      // Si está bloqueada (pagada o abonada): gris neutro
+      return Colors.grey.shade300;
+    }
     if (widget.fueModificada) {
       // Si fue modificada: color más oscuro y sólido
       return widget.primaryColor.withOpacity(0.3);
@@ -35,6 +39,9 @@ class _TarjetaCuotaCompactaState extends State<TarjetaCuotaCompacta> {
   }
 
   Color _getBorderColor() {
+    if (widget.cuota.bloqueada) {
+      return Colors.grey.shade400;
+    }
     if (widget.fueModificada) {
       return widget.primaryColor.withOpacity(0.8);
     } else {
@@ -51,7 +58,7 @@ class _TarjetaCuotaCompactaState extends State<TarjetaCuotaCompacta> {
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
       child: GestureDetector(
-        onTap: () async {
+        onTap: widget.cuota.bloqueada ? null : () async {
           final cuotaEditada = await showDialog<CuotaPersonalizada>(
             context: context,
             builder: (context) => DialogoEditarCuota(
@@ -111,18 +118,20 @@ class _TarjetaCuotaCompactaState extends State<TarjetaCuotaCompacta> {
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 13,
-                      color: widget.fueModificada 
-                          ? Colors.white 
-                          : widget.primaryColor,
+                      color: widget.cuota.bloqueada
+                          ? Colors.grey.shade700
+                          : (widget.fueModificada ? Colors.white : widget.primaryColor),
                     ),
                   ),
                   const SizedBox(width: 4),
                   Icon(
-                    widget.fueModificada ? Icons.edit : Icons.edit_outlined,
+                    widget.cuota.bloqueada 
+                        ? Icons.lock 
+                        : (widget.fueModificada ? Icons.edit : Icons.edit_outlined),
                     size: 11,
-                    color: widget.fueModificada 
-                        ? Colors.white70 
-                        : Colors.grey.shade600,
+                    color: widget.cuota.bloqueada
+                        ? Colors.grey.shade600
+                        : (widget.fueModificada ? Colors.white70 : Colors.grey.shade600),
                   ),
                 ],
               ),
@@ -132,16 +141,16 @@ class _TarjetaCuotaCompactaState extends State<TarjetaCuotaCompacta> {
               Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
-                  color: widget.fueModificada 
+                  color: (widget.fueModificada || widget.cuota.bloqueada)
                       ? Colors.white.withOpacity(0.2)
                       : Colors.transparent,
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  Icons.calendar_today,
+                  widget.cuota.bloqueada ? Icons.lock_clock : Icons.calendar_today,
                   size: 14,
-                  color: widget.fueModificada 
-                      ? Colors.white70 
+                  color: (widget.fueModificada || widget.cuota.bloqueada)
+                      ? Colors.grey.shade700
                       : Colors.grey.shade600,
                 ),
               ),

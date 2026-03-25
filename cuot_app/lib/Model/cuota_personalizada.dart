@@ -15,6 +15,9 @@ class CuotaPersonalizada {
   
   /// Fecha en que realmente se pagó (si ya está pagada)
   DateTime? fechaPagoReal;
+  
+  /// Indica si la cuota está bloqueada para edición (tiene pagos asociados)
+  bool bloqueada;
 
   CuotaPersonalizada({
     required this.numeroCuota,
@@ -22,6 +25,7 @@ class CuotaPersonalizada {
     required this.monto,
     this.pagada = false,
     this.fechaPagoReal,
+    this.bloqueada = false,
   });
 
   /// Convierte el objeto a JSON para guardar en base de datos
@@ -32,6 +36,7 @@ class CuotaPersonalizada {
       'monto': monto,
       'pagada': pagada,
       'fechaPagoReal': fechaPagoReal?.toIso8601String(),
+      'bloqueada': bloqueada,
     };
   }
 
@@ -45,6 +50,7 @@ class CuotaPersonalizada {
       fechaPagoReal: json['fechaPagoReal'] != null 
           ? DateTime.parse(json['fechaPagoReal']) 
           : null,
+      bloqueada: json['bloqueada'] ?? false,
     );
   }
 
@@ -61,6 +67,7 @@ class CuotaPersonalizada {
     double? monto,
     bool? pagada,
     DateTime? fechaPagoReal,
+    bool? bloqueada,
   }) {
     return CuotaPersonalizada(
       numeroCuota: numeroCuota ?? this.numeroCuota,
@@ -68,6 +75,7 @@ class CuotaPersonalizada {
       monto: monto ?? this.monto,
       pagada: pagada ?? this.pagada,
       fechaPagoReal: fechaPagoReal ?? this.fechaPagoReal,
+      bloqueada: bloqueada ?? this.bloqueada,
     );
   }
 

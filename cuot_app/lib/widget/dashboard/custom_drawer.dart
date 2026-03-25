@@ -2,6 +2,7 @@ import 'package:cuot_app/theme/app_colors.dart';
 import 'package:cuot_app/ui/credito_page.dart';
 import 'package:cuot_app/ui/pages/cuotapp_login_page.dart';
 import 'package:cuot_app/ui/pages/dashboard_screen.dart';
+import 'package:cuot_app/ui/pages/historial_renovaciones_page.dart';
 import 'package:cuot_app/ui/pages/seguimiento_creditos_page.dart';
 import 'package:cuot_app/ui/pages/settings_screen.dart';
 import 'package:flutter/material.dart';
@@ -141,7 +142,14 @@ class CustomDrawer extends StatelessWidget {
               label: 'Historial',
               onTap: () {
                 Navigator.pop(context);
-                // TODO: Implementar navegación a historial
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => HistorialRenovacionesPage(
+                      nombreUsuario: nombre_usuario,
+                    ),
+                  ),
+                );
               },
               isSelected: ventanaActiva == 'historial', // 👈 Condición
             ),

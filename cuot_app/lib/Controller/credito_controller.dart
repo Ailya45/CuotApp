@@ -61,13 +61,24 @@ class CreditoController extends ChangeNotifier {
     List<CuotaPersonalizada> cuotasParsed = [];
     if (!esUnico) {
       final List<dynamic> cuotasData = data['Cuotas'] ?? [];
+      final List<dynamic> pagosData = data['Pagos'] ?? [];
+      
       cuotasData.sort((a, b) => (a['numero_cuota'] as int).compareTo(b['numero_cuota']));
-      cuotasParsed = cuotasData.map((c) => CuotaPersonalizada(
-        numeroCuota: c['numero_cuota'],
-        fechaPago: DateTime.parse(c['fecha_pago']),
-        monto: (c['monto'] as num).toDouble(),
-        pagada: c['pagada'] ?? false,
-      )).toList();
+      
+      cuotasParsed = cuotasData.map((c) {
+        final int numCuota = c['numero_cuota'];
+        // Una cuota está bloqueada si está pagada O si tiene algún pago asociado (abono)
+        final bool tienePagos = pagosData.any((p) => p['numero_cuota'] == numCuota);
+        final bool isPagada = c['pagada'] ?? false;
+        
+        return CuotaPersonalizada(
+          numeroCuota: numCuota,
+          fechaPago: DateTime.parse(c['fecha_pago']),
+          monto: (c['monto'] as num).toDouble(),
+          pagada: isPagada,
+          bloqueada: isPagada || tienePagos,
+        );
+      }).toList();
     }
 
     // Modalidad
@@ -155,12 +166,9 @@ class CreditoController extends ChangeNotifier {
           // Si el usuario generó nuevas fechas, estarán en `credito.fechasPersonalizadas`
           List<Map<String, dynamic>> nuevasCuotasPendientes = [];
           
-          if (credito.fechasPersonalizadas != null) {
-            
+          if (credito.fechasPersonalizadas != null && credito.fechasPersonalizadas!.isNotEmpty) {
             // Filtrar cuotas que el usuario editó o dejó (asumiremos que todo `fechasPersonalizadas` 
             // que nos llegue del form que NO esté pagado, representa la nueva distribución).
-            // Pero en `FormularioCuotas` debemos asegurarnos de marcar "pagada" en las históricas.
-            // Para simplificar, insertaremos solo las cuotas no pagadas
             for (var cuota in credito.fechasPersonalizadas!) {
               if (!cuota.pagada) {
                 nuevasCuotasPendientes.add({
@@ -170,6 +178,41 @@ class CreditoController extends ChangeNotifier {
                   'pagada': false,
                 });
               }
+            }
+          } else {
+            // BUG FIX: Si fechasPersonalizadas es null, generamos las cuotas automáticamente 
+            // basándonos en la modalidad y el saldo restante.
+            final double saldoRestante = (credito.costeInversion + credito.margenGanancia) - _totalPagado;
+            final double montoPorCuota = credito.numeroCuotas > 0 ? (saldoRestante / credito.numeroCuotas) : 0;
+            
+            List<DateTime> fechas;
+            switch (credito.modalidadPago) {
+              case ModalidadPago.diario:
+                fechas = DateUt.sugerirFechasDiarias(credito.fechaInicio, credito.numeroCuotas);
+                break;
+              case ModalidadPago.semanal:
+                fechas = DateUt.sugerirFechasSemanales(credito.fechaInicio, credito.numeroCuotas);
+                break;
+              case ModalidadPago.quincenal:
+                fechas = DateUt.sugerirFechasQuincenales(credito.fechaInicio, credito.numeroCuotas);
+                break;
+              case ModalidadPago.mensual:
+                fechas = DateUt.sugerirFechasMensuales(credito.fechaInicio, credito.numeroCuotas);
+                break;
+              default:
+                fechas = [];
+            }
+
+            // BUG FIX: Offset the installment numbers by the count of existing paid installments
+            final int numPagadas = credito.fechasPersonalizadas?.where((c) => c.pagada).length ?? 0;
+            
+            for (int i = 0; i < fechas.length; i++) {
+              nuevasCuotasPendientes.add({
+                'numero_cuota': numPagadas + i + 1,
+                'fecha_pago': fechas[i].toIso8601String(),
+                'monto': montoPorCuota,
+                'pagada': false,
+              });
             }
           }
           await _creditService.updateCreditCuotas(_creditoIdEditar!, updateData, nuevasCuotasPendientes);

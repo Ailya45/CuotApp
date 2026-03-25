@@ -127,11 +127,11 @@ class _DialogoPagoUnicoState extends State<DialogoPagoUnico>
                 ],
               ),
             ),
-            child: Column(
+            child: Stack(
               children: [
-                // Header ya no tiene barra azul/decorativa (ELIMINADO)
-              
-              Expanded(
+                Column(
+                  children: [
+                    Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(20),
                   child: Column(
@@ -611,13 +611,23 @@ class _DialogoPagoUnicoState extends State<DialogoPagoUnico>
                           ),
                         ],
                       ),
-                    ],
+                    ], // Fin Inner Column children
+                  ), // Fin Inner Column
+                ), // Fin SingleChildScrollView
+              ), // Fin Expanded
+            ], // Fin Main Column children
+          ), // Fin Main Column,
+                Positioned(
+                  top: 10,
+                  left: 10,
+                  child: IconButton(
+                    icon: const Icon(Icons.close, color: AppColors.mediumGrey),
+                    onPressed: () => Navigator.of(context).pop(),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
       ),
     ),
   );

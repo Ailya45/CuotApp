@@ -216,14 +216,7 @@ class _FormularioCuotasState extends State<FormularioCuotas> {
                             Validators.positiveNumber(v, 'Cuotas'),
                         onChanged: (value) {
                           _actualizarCredito();
-                          if (_modalidadSeleccionada ==
-                              ModalidadPago.personalizado) {
-                            setState(() {
-                              _mostrarSelectorPersonalizado = false;
-                              _configuracionCompletada = false;
-                              _fechasPersonalizadas = null;
-                            });
-                          }
+                          _ajustarPlanPorCambioMetadata();
                         },
                       ),
                     ],
@@ -355,9 +348,7 @@ class _FormularioCuotasState extends State<FormularioCuotas> {
               onChanged: (modalidad) {
                 setState(() {
                   _modalidadSeleccionada = modalidad!;
-                  _mostrarSelectorPersonalizado = false;
-                  _configuracionCompletada = false;
-                  _fechasPersonalizadas = null;
+                  _ajustarPlanPorCambioMetadata();
                 });
                 _actualizarCredito();
               },
@@ -529,7 +520,8 @@ class _FormularioCuotasState extends State<FormularioCuotas> {
           numeroCuotas: _numCuotas,
           fechaInicio: _fechaInicio,
           montoPorCuota: _valorCuota,
-          precioTotalEsperado: _precioTotal, // 👈 NUEVO: pasar precio total
+          precioTotalEsperado: _precioTotal,
+          initialCuotas: _fechasPersonalizadas, // 👈 PASAR LAS PRESERVADAS
           onFechasSeleccionadas: (fechas) {
             setState(() {
               _fechasPersonalizadas = fechas;
@@ -564,6 +556,96 @@ class _FormularioCuotasState extends State<FormularioCuotas> {
         ],
       ],
     );
+  }
+
+  void _ajustarPlanPorCambioMetadata() {
+    if (_fechasPersonalizadas == null || _fechasPersonalizadas!.isEmpty) {
+      if (_modalidadSeleccionada == ModalidadPago.personalizado) {
+        setState(() {
+          _mostrarSelectorPersonalizado = false;
+          _configuracionCompletada = false;
+        });
+      }
+      return;
+    }
+
+    final numBloqueadas = _fechasPersonalizadas!.where((c) => c.bloqueada).length;
+    
+    if (numBloqueadas == 0) {
+      // Si no hay bloqueadas, podemos resetear para que se regenere
+      setState(() {
+        _fechasPersonalizadas = null;
+        _configuracionCompletada = false;
+        if (_modalidadSeleccionada != ModalidadPago.personalizado) {
+          _mostrarSelectorPersonalizado = false;
+        }
+      });
+      return;
+    }
+
+    // SI HAY BLOQUEADAS: Debemos preservarlas y forzar modo personalizado o re-ajuste
+    setState(() {
+      // 1. Mantener solo las bloqueadas
+      final preservadas = _fechasPersonalizadas!.where((c) => c.bloqueada).toList();
+      
+      // 2. Si el número de cuotas es menor al de bloqueadas, avisar y corregir
+      if (_numCuotas < numBloqueadas) {
+        _cuotasController.text = numBloqueadas.toString();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('No puedes reducir las cuotas a menos de $numBloqueadas (ya tienen pagos)'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      
+      // 3. Actualizar lista y re-generar si aplica
+      final List<CuotaPersonalizada> listaActualizada = List.from(preservadas);
+      
+      if (_modalidadSeleccionada != ModalidadPago.personalizado) {
+        final totalPreservado = CuotaPersonalizada.calcularTotalCuotas(preservadas);
+        final montoRestante = _precioTotal - totalPreservado;
+        final numRestantes = _numCuotas - preservadas.length;
+
+        if (numRestantes > 0) {
+          final montoPorCuota = montoRestante / numRestantes;
+          final ultimaFecha = preservadas.last.fechaPago;
+
+          for (int i = 0; i < numRestantes; i++) {
+            DateTime nuevaFecha;
+            switch (_modalidadSeleccionada) {
+              case ModalidadPago.diario:
+                nuevaFecha = ultimaFecha.add(Duration(days: i + 1));
+                break;
+              case ModalidadPago.semanal:
+                nuevaFecha = ultimaFecha.add(Duration(days: (i + 1) * 7));
+                break;
+              case ModalidadPago.quincenal:
+                nuevaFecha = ultimaFecha.add(Duration(days: (i + 1) * 15));
+                break;
+              case ModalidadPago.mensual:
+                nuevaFecha = DateTime(ultimaFecha.year, ultimaFecha.month + (i + 1), ultimaFecha.day);
+                break;
+              default:
+                nuevaFecha = ultimaFecha.add(Duration(days: (i + 1) * 30));
+            }
+            listaActualizada.add(CuotaPersonalizada(
+              numeroCuota: listaActualizada.length + 1,
+              fechaPago: nuevaFecha,
+              monto: montoPorCuota,
+            ));
+          }
+          _configuracionCompletada = true;
+        } else {
+          _configuracionCompletada = true;
+        }
+      } else {
+        _configuracionCompletada = false;
+      }
+
+      _fechasPersonalizadas = listaActualizada;
+      _mostrarSelectorPersonalizado = true;
+    });
   }
 
   /// 📌 INICIAR CONFIGURACIÓN PERSONALIZADA
@@ -649,10 +731,10 @@ class _FormularioCuotasState extends State<FormularioCuotas> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'Diferencia: \$${diferencia.toStringAsFixed(2)}',
+                            '${diferencia > 0 ? "Sobran" : "Faltan"}: \$${diferencia.abs().toStringAsFixed(2)}',
                             style: TextStyle(
                               color: Colors.red.shade700,
-                              fontWeight: FontWeight.w500,
+                              fontWeight: FontWeight.bold,
                               fontSize: 12,
                             ),
                           ),
