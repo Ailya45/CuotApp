@@ -197,10 +197,37 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
         }
 
         final List<dynamic> rawCuotas = data['Cuotas'] ?? [];
-        // Calcular mora (cuotas vencidas no pagadas)
-        double mora = 0;
+        double moraCalculada = 0;
         final hoy = DateTime.now();
         final List<Map<String, dynamic>> pendingCuotas = [];
+
+        DateTime fechaOriginal;
+        if (data['tipo_credito'] == 'unico' && data['fecha_vencimiento'] != null) {
+          fechaOriginal = DateTime.parse(data['fecha_vencimiento']);
+        } else if (rawCuotas.isNotEmpty) {
+          final List<dynamic> sorted = List.from(rawCuotas)..sort((a,b)=> (a['numero_cuota'] as int).compareTo(b['numero_cuota'] as int));
+          fechaOriginal = DateTime.parse(sorted.last['fecha_pago'].toString());
+        } else {
+          fechaOriginal = data['fecha_inicio'] != null ? DateTime.parse(data['fecha_inicio']) : hoy;
+        }
+
+        // Calcular días de plazo original
+        int plazoDias = 30;
+        if (data['fecha_inicio'] != null) {
+          final start = DateTime.parse(data['fecha_inicio']);
+          plazoDias = fechaOriginal.difference(start).inDays;
+          if (plazoDias <= 0) plazoDias = 30;
+        }
+
+        final double gananciaDiariaOriginal = margenGanancia / plazoDias;
+
+        // Calcular mora inicial (retraso hasta hoy)
+        final hoyMidnight = DateTime(hoy.year, hoy.month, hoy.day);
+        final fechaOriMidnight = DateTime(fechaOriginal.year, fechaOriginal.month, fechaOriginal.day);
+        if (fechaOriMidnight.isBefore(hoyMidnight)) {
+          final int diasRetraso = hoyMidnight.difference(fechaOriMidnight).inDays;
+          moraCalculada = diasRetraso * gananciaDiariaOriginal;
+        }
 
         for (var cuota in rawCuotas) {
           if (cuota['pagada'] != true) {
@@ -209,10 +236,6 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
                 rawPagos.any((p) => p['numero_cuota'] == numeroCuota);
 
             final fecha = DateTime.parse(cuota['fecha_pago']);
-            if (fecha.isBefore(hoy)) {
-              mora += (cuota['monto'] as num).toDouble() *
-                  0.05; // 5% de mora estimado
-            }
             pendingCuotas.add({
               'id': cuota['id'],
               'monto': (cuota['monto'] as num).toDouble(),
@@ -232,38 +255,25 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
           _montoOriginal = totalCredito;
           _saldoPendiente = totalCredito - totalPagado;
           _plazoOriginal = data['numero_cuotas'] ?? 1;
-
-          // Calcular días originales si es pago único
-          if (_tipoCredito == 'unico' &&
-              data['fecha_inicio'] != null &&
-              data['fecha_limite'] != null) {
-            final start = DateTime.parse(data['fecha_inicio']);
-            final end = DateTime.parse(data['fecha_limite']);
-            _plazoDiasOriginal = end.difference(start).inDays;
-          } else {
-            _plazoDiasOriginal = 30; // Default
-          }
-
-          _gananciaDiariaOriginal =
-              _plazoDiasOriginal > 0 ? margenGanancia / _plazoDiasOriginal : 0;
-          _fechaRenovacion =
-              _fechaLimiteNueva ?? DateTime.now().add(const Duration(days: 1));
-
-          _cuotaActual =
-              _plazoOriginal > 0 ? totalCredito / _plazoOriginal : totalCredito;
-          _moraCalculada = mora;
-          _moraManualController.text = mora.toStringAsFixed(2);
-          _modalidadOriginal = data['modalidad_pago']?.toString() ?? 'mensual';
-          _cuotasEditables = pendingCuotas;
+          _plazoDiasOriginal = plazoDias;
+          _gananciaDiariaOriginal = gananciaDiariaOriginal;
 
           if (_tipoCredito == 'unico') {
             final fechaLimiteStr =
-                data['fecha_inicio'] ?? DateTime.now().toIso8601String();
+                data['fecha_vencimiento'] ?? (data['fecha_inicio'] != null ? DateTime.parse(data['fecha_inicio']).add(const Duration(days: 30)).toIso8601String() : DateTime.now().toIso8601String());
             _fechaLimiteNueva =
                 DateTime.parse(fechaLimiteStr).add(const Duration(days: 30));
             _fechaRenovacion = _fechaLimiteNueva;
+          } else {
+            _fechaRenovacion = DateTime.now().add(const Duration(days: 1));
           }
 
+          _cuotaActual =
+              _plazoOriginal > 0 ? totalCredito / _plazoOriginal : totalCredito;
+          _moraCalculada = moraCalculada;
+          _moraManualController.text = moraCalculada > 0 ? moraCalculada.toStringAsFixed(2) : '0.00';
+          _modalidadOriginal = data['modalidad_pago']?.toString() ?? 'mensual';
+          _cuotasEditables = pendingCuotas;
           _isLoading = false;
         });
       } else {
@@ -298,18 +308,22 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
 
     try {
       DateTime fechaOriginal;
-      if (_tipoCredito == 'unico' && _credito?['fecha_limite'] != null) {
-        fechaOriginal = DateTime.parse(
-            _credito?['fecha_limite'] ?? DateTime.now().toIso8601String());
-      } else if (_credito?['fecha_inicio'] != null) {
-        fechaOriginal = DateTime.parse(
-            _credito?['fecha_inicio'] ?? DateTime.now().toIso8601String());
+      if (_tipoCredito == 'unico' && _credito?['fecha_vencimiento'] != null) {
+        fechaOriginal = DateTime.parse(_credito!['fecha_vencimiento']);
       } else {
-        fechaOriginal = DateTime.now();
+        final List<dynamic> cuotas = _credito?['Cuotas'] ?? [];
+        if (cuotas.isNotEmpty) {
+          final List<dynamic> sorted = List.from(cuotas)..sort((a,b)=> (a['numero_cuota'] as int).compareTo(b['numero_cuota'] as int));
+          fechaOriginal = DateTime.parse(sorted.last['fecha_pago'].toString());
+        } else {
+          fechaOriginal = _credito?['fecha_inicio'] != null ? DateTime.parse(_credito!['fecha_inicio']) : DateTime.now();
+        }
       }
 
-      final int diasRetraso =
-          _fechaRenovacion!.difference(fechaOriginal).inDays;
+      final fechaRenovMidnight = DateTime(_fechaRenovacion!.year, _fechaRenovacion!.month, _fechaRenovacion!.day);
+      final fechaOriMidnight = DateTime(fechaOriginal.year, fechaOriginal.month, fechaOriginal.day);
+      
+      final int diasRetraso = fechaRenovMidnight.difference(fechaOriMidnight).inDays;
       return diasRetraso > 0 ? diasRetraso * _gananciaDiariaOriginal : 0;
     } catch (e, stackTrace) {
       debugPrint('Error calculando mora sugerida: $e');
@@ -463,6 +477,9 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
           'costo_inversion': _costoInversion,
           'modalidad': _modalidadOriginal,
           'tipo_credito': _tipoCredito,
+          'fecha_inicio': _credito?['fecha_inicio'],
+          'fecha_vencimiento': _credito?['fecha_vencimiento'],
+          'cuotas_anteriores': _credito?['Cuotas'],
         },
         condicionesNuevas: {
           'tipo_credito': _tipoCredito,

@@ -830,6 +830,46 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
     );
   }
 
+  Widget _buildListaCuotasMini(List<dynamic> cuotas, {required bool isAnterior}) {
+    if (cuotas.isEmpty) return const SizedBox.shrink();
+    
+    List<dynamic> parsedCuotas = List.from(cuotas);
+    parsedCuotas.sort((a,b) {
+      int idxA = a['numero_cuota'] ?? a['numero'] ?? 0;
+      int idxB = b['numero_cuota'] ?? b['numero'] ?? 0;
+      return idxA.compareTo(idxB);
+    });
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(isAnterior ? 'Cuotas Anteriores:' : 'Nuevas Cuotas:', 
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey.shade800)),
+          const SizedBox(height: 4),
+          ...parsedCuotas.map((c) {
+            final n = c['numero_cuota'] ?? c['numero'] ?? '?';
+            final m = c['monto'] ?? 0;
+            final f = c['fecha_pago'] ?? c['fecha'];
+            final fStr = f != null ? _formatFecha(f.toString()) : 'N/A';
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Cuota $n', style: const TextStyle(fontSize: 12)),
+                  Text(fStr, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                  Text('\$${(m as num).toStringAsFixed(2)}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                ],
+              ),
+            );
+          }).toList(),
+        ],
+      ),
+    );
+  }
+
   Widget _buildCondRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
@@ -1007,6 +1047,11 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
                         padding: const EdgeInsets.all(12),
                         child: Column(
                           children: [
+                            if (condAnteriores['fecha_inicio'] != null)
+                              _buildCondRow('Fecha Inicio', _formatFecha(condAnteriores['fecha_inicio'].toString())),
+                            if (condAnteriores['fecha_vencimiento'] != null)
+                              _buildCondRow('Fecha Límite Org.', _formatFecha(condAnteriores['fecha_vencimiento'].toString())),
+                            
                             if (tipoCredito == 'unico') ...[
                               _buildCondRow(
                                 'Plazo Anterior',
@@ -1028,6 +1073,9 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
                               'Saldo en la fecha',
                               _formatMonto(condAnteriores['saldo_pendiente']),
                             ),
+                            
+                            if (tipoCredito == 'cuotas' && condAnteriores['cuotas_anteriores'] is List && (condAnteriores['cuotas_anteriores'] as List).isNotEmpty)
+                              _buildListaCuotasMini(condAnteriores['cuotas_anteriores'] as List, isAnterior: true),
                           ],
                         ),
                       ),
@@ -1085,6 +1133,9 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
                                 'Abono',
                                 _formatMonto(condNuevas['abono']),
                               ),
+                            
+                            if (tipoCredito == 'cuotas' && condNuevas['cuotas_renovadas'] is List && (condNuevas['cuotas_renovadas'] as List).isNotEmpty)
+                              _buildListaCuotasMini(condNuevas['cuotas_renovadas'] as List, isAnterior: false),
                           ],
                         ),
                       ),
