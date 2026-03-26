@@ -33,13 +33,22 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
   // Campos del formulario
   // Campos del formulario
   final TextEditingController _motivoController = TextEditingController();
-  final TextEditingController _abonoController = TextEditingController(text: '0');
-  final TextEditingController _observacionesController = TextEditingController();
-  final TextEditingController _moraManualController = TextEditingController(text: '0');
+  final TextEditingController _abonoController =
+      TextEditingController(text: '0');
+  final TextEditingController _observacionesController =
+      TextEditingController();
+  final TextEditingController _moraManualController =
+      TextEditingController(text: '0');
   bool _incluirMora = false;
 
   // Para Pago Único
   DateTime? _fechaLimiteNueva;
+
+  // Fecha de renovación (global para cálculo de mora)
+  DateTime? _fechaRenovacion;
+
+  // Ganancia diaria original para cálculo de mora
+  double _gananciaDiariaOriginal = 0;
 
   // Para Cuotas (Editables)
   List<Map<String, dynamic>> _cuotasEditables = [];
@@ -59,7 +68,7 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
   void initState() {
     super.initState();
     _loadCreditData();
-    
+
     // Listeners para auto-ajuste de cuotas
     _abonoController.addListener(_onParametroCambiado);
     _moraManualController.addListener(_onParametroCambiado);
@@ -72,11 +81,12 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
       setState(() {});
     }
   }
+
   void _repartirMontoEntreCuotas() {
     if (_cuotasEditables.isEmpty) return;
-    
+
     final double totalTotal = _montoTotalCalculado;
-    
+
     // 1. Calcular cunto ya está "ocupado" por cuotas bloqueadas
     double montoBloqueado = 0;
     int numNoBloqueadas = 0;
@@ -91,8 +101,9 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
     if (numNoBloqueadas == 0) return; // No hay donde repartir
 
     final double montoRestante = totalTotal - montoBloqueado;
-    final double montoPorCuota = (montoRestante > 0 ? montoRestante : 0) / numNoBloqueadas;
-    
+    final double montoPorCuota =
+        (montoRestante > 0 ? montoRestante : 0) / numNoBloqueadas;
+
     setState(() {
       for (var cuota in _cuotasEditables) {
         if (cuota['bloqueada'] != true) {
@@ -134,7 +145,7 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
         );
         return;
       }
-      
+
       setState(() {
         _cuotasEditables.removeLast();
         last['controller'].dispose();
@@ -190,15 +201,17 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
         double mora = 0;
         final hoy = DateTime.now();
         final List<Map<String, dynamic>> pendingCuotas = [];
-        
+
         for (var cuota in rawCuotas) {
           if (cuota['pagada'] != true) {
             final numeroCuota = cuota['numero_cuota'];
-            final bool tieneAbonos = rawPagos.any((p) => p['numero_cuota'] == numeroCuota);
-            
+            final bool tieneAbonos =
+                rawPagos.any((p) => p['numero_cuota'] == numeroCuota);
+
             final fecha = DateTime.parse(cuota['fecha_pago']);
             if (fecha.isBefore(hoy)) {
-              mora += (cuota['monto'] as num).toDouble() * 0.05; // 5% de mora estimado
+              mora += (cuota['monto'] as num).toDouble() *
+                  0.05; // 5% de mora estimado
             }
             pendingCuotas.add({
               'id': cuota['id'],
@@ -206,7 +219,8 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
               'fecha': fecha,
               'bloqueada': tieneAbonos,
               'numero': numeroCuota,
-              'controller': TextEditingController(text: (cuota['monto'] as num).toStringAsFixed(2)),
+              'controller': TextEditingController(
+                  text: (cuota['monto'] as num).toStringAsFixed(2)),
             });
           }
         }
@@ -218,9 +232,11 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
           _montoOriginal = totalCredito;
           _saldoPendiente = totalCredito - totalPagado;
           _plazoOriginal = data['numero_cuotas'] ?? 1;
-          
+
           // Calcular días originales si es pago único
-          if (_tipoCredito == 'unico' && data['fecha_inicio'] != null && data['fecha_limite'] != null) {
+          if (_tipoCredito == 'unico' &&
+              data['fecha_inicio'] != null &&
+              data['fecha_limite'] != null) {
             final start = DateTime.parse(data['fecha_inicio']);
             final end = DateTime.parse(data['fecha_limite']);
             _plazoDiasOriginal = end.difference(start).inDays;
@@ -228,15 +244,24 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
             _plazoDiasOriginal = 30; // Default
           }
 
-          _cuotaActual = _plazoOriginal > 0 ? totalCredito / _plazoOriginal : totalCredito;
+          _gananciaDiariaOriginal =
+              _plazoDiasOriginal > 0 ? margenGanancia / _plazoDiasOriginal : 0;
+          _fechaRenovacion =
+              _fechaLimiteNueva ?? DateTime.now().add(const Duration(days: 1));
+
+          _cuotaActual =
+              _plazoOriginal > 0 ? totalCredito / _plazoOriginal : totalCredito;
           _moraCalculada = mora;
           _moraManualController.text = mora.toStringAsFixed(2);
           _modalidadOriginal = data['modalidad_pago']?.toString() ?? 'mensual';
           _cuotasEditables = pendingCuotas;
-          
+
           if (_tipoCredito == 'unico') {
-            final fechaLimiteStr = data['fecha_inicio'] ?? DateTime.now().toIso8601String();
-            _fechaLimiteNueva = DateTime.parse(fechaLimiteStr).add(const Duration(days: 30));
+            final fechaLimiteStr =
+                data['fecha_inicio'] ?? DateTime.now().toIso8601String();
+            _fechaLimiteNueva =
+                DateTime.parse(fechaLimiteStr).add(const Duration(days: 30));
+            _fechaRenovacion = _fechaLimiteNueva;
           }
 
           _isLoading = false;
@@ -266,7 +291,32 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
     return total;
   }
 
+  double get _moraSugerida {
+    if (_fechaRenovacion == null || _credito == null) {
+      return _moraCalculada;
+    }
 
+    try {
+      DateTime fechaOriginal;
+      if (_tipoCredito == 'unico' && _credito?['fecha_limite'] != null) {
+        fechaOriginal = DateTime.parse(
+            _credito?['fecha_limite'] ?? DateTime.now().toIso8601String());
+      } else if (_credito?['fecha_inicio'] != null) {
+        fechaOriginal = DateTime.parse(
+            _credito?['fecha_inicio'] ?? DateTime.now().toIso8601String());
+      } else {
+        fechaOriginal = DateTime.now();
+      }
+
+      final int diasRetraso =
+          _fechaRenovacion!.difference(fechaOriginal).inDays;
+      return diasRetraso > 0 ? diasRetraso * _gananciaDiariaOriginal : 0;
+    } catch (e, stackTrace) {
+      debugPrint('Error calculando mora sugerida: $e');
+      debugPrint('$stackTrace');
+      return 0;
+    }
+  }
 
   double get _montoTotalCalculado {
     double total = _saldoPendiente + (_incluirMora ? _montoMora : 0) - _abono;
@@ -280,7 +330,7 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
   double get _nuevaCuota {
     if (_tipoCredito == 'unico') return _nuevoMontoTotal;
     if (_cuotasEditables.isEmpty) return 0;
-    // En cuotas, la "cuota" es variable, pero para el resumen mostramos el promedio 
+    // En cuotas, la "cuota" es variable, pero para el resumen mostramos el promedio
     // o simplemente quitamos este concepto si el usuario edita cada una.
     return _nuevoMontoTotal / _cuotasEditables.length;
   }
@@ -294,30 +344,96 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
   }
 
   Future<void> _seleccionarFechaLimite() async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _fechaLimiteNueva ?? DateTime.now(),
-      firstDate: DateTime.now().subtract(const Duration(days: 365)),
-      lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
-    );
-    if (picked != null) {
-      setState(() {
-        _fechaLimiteNueva = picked;
-      });
+    try {
+      Locale pickerLocale;
+      try {
+        pickerLocale = Localizations.localeOf(context);
+      } catch (_) {
+        pickerLocale = const Locale('es', 'ES');
+      }
+
+      final DateTime? picked = await showDatePicker(
+        context: context,
+        initialDate: _fechaLimiteNueva ?? DateTime.now(),
+        firstDate: DateTime(2000), // 👈 CAMBIADO: Permitir fechas pasadas
+        lastDate: DateTime.now().add(const Duration(days: 365 * 10)),
+        locale: pickerLocale,
+      );
+      if (picked != null) {
+        setState(() {
+          _fechaLimiteNueva = picked;
+          _fechaRenovacion = picked;
+        });
+      }
+    } catch (e, stack) {
+      debugPrint('Error en selector de fecha límite: $e');
+      debugPrint('$stack');
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Error al seleccionar fecha. Intente de nuevo.'),
+        backgroundColor: Colors.red,
+      ));
+    }
+  }
+
+  Future<void> _seleccionarFechaRenovacion() async {
+    try {
+      Locale pickerLocale;
+      try {
+        pickerLocale = Localizations.localeOf(context);
+      } catch (_) {
+        pickerLocale = const Locale('es', 'ES');
+      }
+
+      final DateTime? picked = await showDatePicker(
+        context: context,
+        initialDate: _fechaRenovacion ?? DateTime.now(),
+        firstDate: DateTime(2000),
+        lastDate: DateTime.now().add(const Duration(days: 365 * 10)),
+        locale: pickerLocale,
+      );
+      if (picked != null) {
+        setState(() {
+          _fechaRenovacion = picked;
+        });
+      }
+    } catch (e, stack) {
+      debugPrint('Error en selector de fecha renovacion: $e');
+      debugPrint('$stack');
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Error al seleccionar fecha. Intente de nuevo.'),
+        backgroundColor: Colors.red,
+      ));
     }
   }
 
   Future<void> _seleccionarFechaCuota(int index) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _cuotasEditables[index]['fecha'],
-      firstDate: DateTime.now().subtract(const Duration(days: 365)),
-      lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
-    );
-    if (picked != null) {
-      setState(() {
-        _cuotasEditables[index]['fecha'] = picked;
-      });
+    try {
+      Locale pickerLocale;
+      try {
+        pickerLocale = Localizations.localeOf(context);
+      } catch (_) {
+        pickerLocale = const Locale('es', 'ES');
+      }
+
+      final DateTime? picked = await showDatePicker(
+        context: context,
+        initialDate: _cuotasEditables[index]['fecha'],
+        firstDate: DateTime(2000), // 👈 CAMBIADO: Permitir fechas pasadas
+        lastDate: DateTime.now().add(const Duration(days: 365 * 10)),
+        locale: pickerLocale,
+      );
+      if (picked != null) {
+        setState(() {
+          _cuotasEditables[index]['fecha'] = picked;
+        });
+      }
+    } catch (e, stack) {
+      debugPrint('Error en selector de fecha cuota: $e');
+      debugPrint('$stack');
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Error al seleccionar fecha. Intente de nuevo.'),
+        backgroundColor: Colors.red,
+      ));
     }
   }
 
@@ -337,12 +453,13 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
     if (_tipoCredito == 'cuotas') {
       final double totalCuotas = _montoCuotasEditadas;
       final double totalEsperado = _montoTotalCalculado;
-      
+
       if ((totalCuotas - totalEsperado).abs() > 0.01) {
         final diff = totalCuotas - totalEsperado;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('La suma no coincide: ${diff > 0 ? "Sobran" : "Faltan"} \$${diff.abs().toStringAsFixed(2)} del nuevo total (\$${totalEsperado.toStringAsFixed(2)})'),
+            content: Text(
+                'La suma no coincide: ${diff > 0 ? "Sobran" : "Faltan"} \$${diff.abs().toStringAsFixed(2)} del nuevo total (\$${totalEsperado.toStringAsFixed(2)})'),
             backgroundColor: AppColors.error,
           ),
         );
@@ -356,7 +473,8 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
       final cliente = _credito!['Clientes'];
       final clienteId = cliente['id'];
 
-      final List<Map<String, dynamic>> cuotasParaGuardar = _cuotasEditables.map((c) {
+      final List<Map<String, dynamic>> cuotasParaGuardar =
+          _cuotasEditables.map((c) {
         return {
           'id': c['id'],
           'monto': double.tryParse(c['controller'].text) ?? 0,
@@ -385,7 +503,10 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
           'plazo': _tipoCredito == 'unico' ? 1 : _cuotasEditables.length,
           'incluye_mora': _incluirMora,
           'monto_mora': _incluirMora ? _montoMora : 0,
-          if (_tipoCredito == 'unico') 'fecha_pago_nueva': _fechaLimiteNueva?.toIso8601String(),
+          if (_fechaRenovacion != null)
+            'fecha_renovacion': _fechaRenovacion!.toIso8601String(),
+          if (_tipoCredito == 'unico')
+            'fecha_pago_nueva': _fechaLimiteNueva?.toIso8601String(),
           if (_tipoCredito == 'cuotas') 'cuotas_renovadas': cuotasParaGuardar,
         },
         nuevoPlazo: _tipoCredito == 'unico' ? 1 : _cuotasEditables.length,
@@ -491,9 +612,7 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
                       _buildReadOnlyRow(Icons.attach_money, 'Monto Original',
                           '\$${_montoOriginal.toStringAsFixed(2)}'),
                       const SizedBox(height: 8),
-                      _buildReadOnlyRow(
-                          Icons.warning_amber,
-                          'Saldo Pendiente',
+                      _buildReadOnlyRow(Icons.warning_amber, 'Saldo Pendiente',
                           '\$${_saldoPendiente.toStringAsFixed(2)}',
                           color: AppColors.warning),
                       if (_tipoCredito != 'unico') ...[
@@ -503,17 +622,14 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
                       ],
                       const SizedBox(height: 8),
                       _buildReadOnlyRow(
-                        Icons.calendar_today, 
-                        'Plazo Original',
-                        _tipoCredito == 'unico' 
-                          ? 'Pago Único' 
-                          : '$_plazoOriginal cuotas'
-                      ),
+                          Icons.calendar_today,
+                          'Plazo Original',
+                          _tipoCredito == 'unico'
+                              ? 'Pago Único'
+                              : '$_plazoOriginal cuotas'),
                       if (_moraCalculada > 0) ...[
                         const SizedBox(height: 8),
-                        _buildReadOnlyRow(
-                            Icons.report_problem,
-                            'Mora Sugerida',
+                        _buildReadOnlyRow(Icons.report_problem, 'Mora Sugerida',
                             '\$${_moraCalculada.toStringAsFixed(2)}',
                             color: AppColors.error),
                       ],
@@ -547,7 +663,8 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
                         InkWell(
                           onTap: _seleccionarFechaLimite,
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 12),
                             decoration: BoxDecoration(
                               color: Colors.grey.shade100,
                               borderRadius: BorderRadius.circular(12),
@@ -555,12 +672,14 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
                             ),
                             child: Row(
                               children: [
-                                const Icon(Icons.calendar_month, color: AppColors.primaryGreen, size: 20),
+                                const Icon(Icons.calendar_month,
+                                    color: AppColors.primaryGreen, size: 20),
                                 const SizedBox(width: 12),
                                 Text(
-                                  _fechaLimiteNueva != null 
-                                    ? DateFormat('dd/MM/yyyy').format(_fechaLimiteNueva!) 
-                                    : 'Seleccionar fecha',
+                                  _fechaLimiteNueva != null
+                                      ? DateFormat('dd/MM/yyyy')
+                                          .format(_fechaLimiteNueva!)
+                                      : 'Seleccionar fecha',
                                   style: const TextStyle(fontSize: 15),
                                 ),
                               ],
@@ -583,19 +702,30 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
                               margin: const EdgeInsets.only(bottom: 12),
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: isLocked ? Colors.grey.shade200 : Colors.grey.shade50,
+                                color: isLocked
+                                    ? Colors.grey.shade200
+                                    : Colors.grey.shade50,
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: isLocked ? Colors.grey.shade400 : Colors.grey.shade200),
+                                border: Border.all(
+                                    color: isLocked
+                                        ? Colors.grey.shade400
+                                        : Colors.grey.shade200),
                               ),
                               child: Row(
                                 children: [
                                   CircleAvatar(
                                     radius: 14,
-                                    backgroundColor: isLocked ? Colors.grey : AppColors.primaryGreen,
-                                    child: isLocked 
-                                      ? const Icon(Icons.lock, color: Colors.white, size: 14)
-                                      : Text('${cuota['numero'] ?? (index + 1)}', 
-                                          style: const TextStyle(color: Colors.white, fontSize: 12)),
+                                    backgroundColor: isLocked
+                                        ? Colors.grey
+                                        : AppColors.primaryGreen,
+                                    child: isLocked
+                                        ? const Icon(Icons.lock,
+                                            color: Colors.white, size: 14)
+                                        : Text(
+                                            '${cuota['numero'] ?? (index + 1)}',
+                                            style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 12)),
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
@@ -603,13 +733,21 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
                                     child: TextFormField(
                                       controller: cuota['controller'],
                                       enabled: !isLocked,
-                                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                      keyboardType:
+                                          const TextInputType.numberWithOptions(
+                                              decimal: true),
                                       decoration: InputDecoration(
                                         prefixText: '\$ ',
                                         isDense: true,
-                                        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                                        fillColor: isLocked ? Colors.grey.shade100 : Colors.white,
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                                horizontal: 8, vertical: 8),
+                                        border: OutlineInputBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(8)),
+                                        fillColor: isLocked
+                                            ? Colors.grey.shade100
+                                            : Colors.white,
                                         filled: true,
                                       ),
                                       onChanged: (_) => setState(() {}),
@@ -619,19 +757,28 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
                                   Expanded(
                                     flex: 4,
                                     child: InkWell(
-                                      onTap: isLocked ? null : () => _seleccionarFechaCuota(index),
+                                      onTap: isLocked
+                                          ? null
+                                          : () => _seleccionarFechaCuota(index),
                                       child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 8, vertical: 8),
                                         decoration: BoxDecoration(
-                                          border: Border.all(color: Colors.grey),
-                                          borderRadius: BorderRadius.circular(8),
+                                          border:
+                                              Border.all(color: Colors.grey),
+                                          borderRadius:
+                                              BorderRadius.circular(8),
                                         ),
                                         child: Row(
                                           children: [
-                                            const Icon(Icons.calendar_today, size: 14),
+                                            const Icon(Icons.calendar_today,
+                                                size: 14),
                                             const SizedBox(width: 4),
-                                            Text(DateFormat('dd/MM/yy').format(cuota['fecha']), 
-                                              style: const TextStyle(fontSize: 12)),
+                                            Text(
+                                                DateFormat('dd/MM/yy')
+                                                    .format(cuota['fecha']),
+                                                style: const TextStyle(
+                                                    fontSize: 12)),
                                           ],
                                         ),
                                       ),
@@ -648,12 +795,16 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
                             Expanded(
                               child: OutlinedButton.icon(
                                 onPressed: _quitarCuota,
-                                icon: const Icon(Icons.remove_circle_outline, size: 18),
-                                label: const Text('Quitar Cuota', style: TextStyle(fontSize: 12)),
+                                icon: const Icon(Icons.remove_circle_outline,
+                                    size: 18),
+                                label: const Text('Quitar Cuota',
+                                    style: TextStyle(fontSize: 12)),
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: AppColors.error,
-                                  side: BorderSide(color: AppColors.error.withOpacity(0.5)),
-                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                  side: BorderSide(
+                                      color: AppColors.error.withOpacity(0.5)),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 8),
                                 ),
                               ),
                             ),
@@ -661,12 +812,17 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
                             Expanded(
                               child: OutlinedButton.icon(
                                 onPressed: _agregarCuota,
-                                icon: const Icon(Icons.add_circle_outline, size: 18),
-                                label: const Text('Agregar Cuota', style: TextStyle(fontSize: 12)),
+                                icon: const Icon(Icons.add_circle_outline,
+                                    size: 18),
+                                label: const Text('Agregar Cuota',
+                                    style: TextStyle(fontSize: 12)),
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: AppColors.primaryGreen,
-                                  side: BorderSide(color: AppColors.primaryGreen.withOpacity(0.5)),
-                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                  side: BorderSide(
+                                      color: AppColors.primaryGreen
+                                          .withOpacity(0.5)),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 8),
                                 ),
                               ),
                             ),
@@ -674,85 +830,47 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
                         ),
                       ],
 
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 12),
 
-                      // Checkbox Incluir Mora
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppColors.error.withOpacity(0.05),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: AppColors.error.withOpacity(0.2),
+                      const Text('Fecha de Renovación',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w600, fontSize: 14)),
+                      const SizedBox(height: 8),
+                      InkWell(
+                        onTap: _seleccionarFechaRenovacion,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey.shade400),
                           ),
-                        ),
-                        child: Row(
-                          children: [
-                            Checkbox(
-                              value: _incluirMora,
-                              activeColor: AppColors.error,
-                              onChanged: (val) {
-                                setState(() {
-                                  _incluirMora = val ?? false;
-                                  if (_tipoCredito == 'cuotas') _repartirMontoEntreCuotas();
-                                });
-                              },
-                            ),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    '¿Desea incluir mora en esta renovación?',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                  if (_moraCalculada > 0)
-                                    Text(
-                                      'Mora sugerida: \$${_moraCalculada.toStringAsFixed(2)}',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: AppColors.error,
-                                      ),
-                                    ),
-                                ],
+                          child: Row(
+                            children: [
+                              const Icon(Icons.calendar_month,
+                                  color: AppColors.primaryGreen, size: 20),
+                              const SizedBox(width: 12),
+                              Text(
+                                _fechaRenovacion != null
+                                    ? DateFormat('dd/MM/yyyy')
+                                        .format(_fechaRenovacion!)
+                                    : 'Seleccionar fecha',
+                                style: const TextStyle(fontSize: 15),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
-                      
-                      if (_incluirMora) ...[
-                        const SizedBox(height: 16),
-                        // Monto de Mora (Editable)
-                        const Text('Monto de Mora a Incluir (\$)',
-                            style: TextStyle(
-                                fontWeight: FontWeight.w600, fontSize: 14)),
-                        const SizedBox(height: 8),
-                        TextFormField(
-                          controller: _moraManualController,
-                          keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true),
-                          decoration: InputDecoration(
-                            prefixText: '\$ ',
-                            contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 12),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            filled: true,
-                            fillColor: Colors.grey.shade100,
-                            hintText: 'Ej: 5.00',
-                          ),
-                          onChanged: (_) => setState(() {}),
-                        ),
-                      ],
+
+                      const SizedBox(height: 10),
+                      Text(
+                          'Mora sugerida: \$${_moraSugerida.toStringAsFixed(2)}',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.error)),
 
                       const SizedBox(height: 16),
-
-                      // Abono
                       const Text('Abono en la Renovación (\$)',
                           style: TextStyle(
                               fontWeight: FontWeight.w600, fontSize: 14)),
@@ -784,9 +902,84 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
                         },
                       ),
 
+                      const SizedBox(height: 24),
+
+                      // Checkbox Incluir Mora
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.error.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: AppColors.error.withOpacity(0.2),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Checkbox(
+                              value: _incluirMora,
+                              activeColor: AppColors.error,
+                              onChanged: (val) {
+                                setState(() {
+                                  _incluirMora = val ?? false;
+                                  if (_tipoCredito == 'cuotas')
+                                    _repartirMontoEntreCuotas();
+                                });
+                              },
+                            ),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    '¿Desea incluir mora en esta renovación?',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  if (_moraCalculada > 0)
+                                    Text(
+                                      'Mora sugerida: \$${_moraCalculada.toStringAsFixed(2)}',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: AppColors.error,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      if (_incluirMora) ...[
+                        const SizedBox(height: 16),
+                        // Monto de Mora (Editable)
+                        const Text('Monto de Mora a Incluir (\$)',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w600, fontSize: 14)),
+                        const SizedBox(height: 8),
+                        TextFormField(
+                          controller: _moraManualController,
+                          keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true),
+                          decoration: InputDecoration(
+                            prefixText: '\$ ',
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 12),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            filled: true,
+                            fillColor: Colors.grey.shade100,
+                            hintText: 'Ej: 5.00',
+                          ),
+                          onChanged: (_) => setState(() {}),
+                        ),
+                      ],
+
                       const SizedBox(height: 16),
-
-
 
                       // Motivo
                       const Text('Motivo de Renovación *',
@@ -885,18 +1078,16 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
                       TableRow(
                         children: [
                           _buildTableCell('Plazo'),
-                          _buildTableCell(
-                            _tipoCredito == 'unico' 
+                          _buildTableCell(_tipoCredito == 'unico'
                               ? '${_plazoOriginal > 1 ? _plazoOriginal : "30"} días' // Usualmente 30 si es inicial único
-                              : '$_plazoOriginal cuotas'
-                          ),
+                              : '$_plazoOriginal cuotas'),
                           _buildTableCell(
-                            _tipoCredito == 'unico' 
-                              ? (_fechaLimiteNueva != null 
-                                  ? '${_fechaLimiteNueva!.difference(DateTime.parse(_credito?['fecha_inicio'] ?? DateTime.now().toIso8601String())).inDays} días'
-                                  : 'N/A')
-                              : '${_cuotasEditables.length} cuotas',
-                            color: AppColors.primaryGreen),
+                              _tipoCredito == 'unico'
+                                  ? (_fechaLimiteNueva != null
+                                      ? '${_fechaLimiteNueva!.difference(DateTime.parse(_credito?['fecha_inicio'] ?? DateTime.now().toIso8601String())).inDays} días'
+                                      : 'N/A')
+                                  : '${_cuotasEditables.length} cuotas',
+                              color: AppColors.primaryGreen),
                         ],
                       ),
                       // Cuota
@@ -917,7 +1108,8 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
                           children: [
                             _buildTableCell('Mora'),
                             _buildTableCell('\$0.00'),
-                            _buildTableCell('\$${_montoMora.toStringAsFixed(2)}',
+                            _buildTableCell(
+                                '\$${_montoMora.toStringAsFixed(2)}',
                                 color: AppColors.error),
                           ],
                         ),
@@ -940,10 +1132,16 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
                         ],
                       ),
                       // Diferencia de cuotas
-                      if (_tipoCredito == 'cuotas' && (_montoCuotasEditadas - _montoTotalCalculado).abs() > 0.01)
+                      if (_tipoCredito == 'cuotas' &&
+                          (_montoCuotasEditadas - _montoTotalCalculado).abs() >
+                              0.01)
                         TableRow(
                           children: [
-                            _buildTableCell(_montoCuotasEditadas > _montoTotalCalculado ? 'Sobran' : 'Faltan', color: AppColors.error),
+                            _buildTableCell(
+                                _montoCuotasEditadas > _montoTotalCalculado
+                                    ? 'Sobran'
+                                    : 'Faltan',
+                                color: AppColors.error),
                             _buildTableCell(''),
                             _buildTableCell(
                               '\$${(_montoCuotasEditadas - _montoTotalCalculado).abs().toStringAsFixed(2)}',
@@ -1024,8 +1222,8 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
                                   strokeWidth: 2, color: Colors.white),
                             )
                           : const Icon(Icons.save),
-                      label:
-                          Text(_isSaving ? 'Guardando...' : 'Guardar Renovación'),
+                      label: Text(
+                          _isSaving ? 'Guardando...' : 'Guardar Renovación'),
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         backgroundColor: AppColors.primaryGreen,
@@ -1065,8 +1263,7 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
         Icon(icon, size: 18, color: Colors.grey.shade600),
         const SizedBox(width: 8),
         Text('$label: ',
-            style:
-                const TextStyle(fontSize: 13, color: Colors.grey)),
+            style: const TextStyle(fontSize: 13, color: Colors.grey)),
         Expanded(
           child: Text(
             value,

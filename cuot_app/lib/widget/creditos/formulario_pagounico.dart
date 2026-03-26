@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cuot_app/Model/credito_model.dart';
 import 'package:cuot_app/utils/validators.dart';
-import 'package:cuot_app/widget/creditos/custom_date_picker.dart';
+import 'package:cuot_app/widget/creditos/custom_date_text_field.dart';
 import 'package:cuot_app/widget/creditos/factura_uploader.dart';
 import 'package:cuot_app/utils/date_utils.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart'; // 👈 NUEVO
@@ -184,7 +184,7 @@ class _FormularioPagounicoState extends State<FormularioPagounico> {
                           ),*/
                         ],
                       ),
-                      CustomDatePicker(
+                      CustomDateTextField(
                         selectedDate: _fechaInicio,
                         onDateSelected: (date) {
                           setState(() => _fechaInicio = date);
@@ -229,7 +229,7 @@ class _FormularioPagounicoState extends State<FormularioPagounico> {
                         ],
                       ),
                       
-                      CustomDatePicker(
+                      CustomDateTextField(
                         selectedDate: _fechaLimite,
                         onDateSelected: (date) {
                           setState(() => _fechaLimite = date);

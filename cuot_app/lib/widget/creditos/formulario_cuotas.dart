@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:cuot_app/Model/credito_model.dart';
 import 'package:cuot_app/Model/cuota_personalizada.dart';
 
-import 'package:cuot_app/widget/creditos/custom_date_picker.dart';
+import 'package:cuot_app/widget/creditos/custom_date_text_field.dart';
 import 'package:cuot_app/widget/creditos/factura_uploader.dart';
 import 'package:flutter/material.dart' hide DateUtils;
 import 'package:cuot_app/utils/validators.dart';
@@ -252,7 +252,7 @@ class _FormularioCuotasState extends State<FormularioCuotas> {
                           ],
                         ),
                         const SizedBox(height: 8),
-                        CustomDatePicker(
+                        CustomDateTextField(
                           selectedDate: _fechaInicio,
                           onDateSelected: (date) {
                             setState(() {
