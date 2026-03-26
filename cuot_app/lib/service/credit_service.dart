@@ -373,6 +373,15 @@ class CreditService {
   /// Eliminar un crédito y todos sus datos asociados (pagos y cuotas)
   Future<void> deleteCredit(String creditId) async {
     try {
+      // 0. Obtener cliente_id
+      final creditoData = await _supabase.client
+          .schema('Financiamientos')
+          .from('Creditos')
+          .select('cliente_id')
+          .eq('id', creditId)
+          .single();
+      final String? clienteId = creditoData['cliente_id'];
+
       // 1. Eliminar pagos asociados
       await _supabase.client
           .schema('Financiamientos')
@@ -393,6 +402,23 @@ class CreditService {
           .from('Creditos')
           .delete()
           .eq('id', creditId);
+
+      // 4. Limpiar cliente huérfano si aplica
+      if (clienteId != null) {
+        final otherCredits = await _supabase.client
+            .schema('Financiamientos')
+            .from('Creditos')
+            .select('id')
+            .eq('cliente_id', clienteId);
+            
+        if (otherCredits.isEmpty) {
+          await _supabase.client
+              .schema('Financiamientos')
+              .from('Clientes')
+              .delete()
+              .eq('id', clienteId);
+        }
+      }
 
       // Invalidar caché
       invalidateCache();

@@ -251,38 +251,90 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Cliente: ${cliente['nombre'] ?? 'N/A'}',
-              style:
-                  const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 10),
-          _buildInfoRow(Icons.person, 'Nombre', cliente['nombre'] ?? 'N/A'),
-          const SizedBox(height: 8),
-          _buildInfoRow(Icons.phone, 'Teléfono', cliente['telefono'] ?? 'N/A'),
-          const SizedBox(height: 8),
-          _buildInfoRow(
-              Icons.credit_score, 'Concepto', _credito?['concepto'] ?? 'N/A'),
-          const SizedBox(height: 8),
-          _buildInfoRow(Icons.calendar_today, 'Fecha de inicio',
-              _credito?['fecha_inicio'] != null
-                  ? _formatFecha(_credito!['fecha_inicio'])
-                  : 'N/A'),
-          const SizedBox(height: 8),
-          _buildInfoRow(Icons.calendar_month, 'Fecha límite',
-              _credito?['fecha_limite'] != null
-                  ? _formatFecha(_credito!['fecha_limite'])
-                  : 'N/A'),
-          const SizedBox(height: 8),
-          _buildInfoRow(Icons.monetization_on, 'Monto total',
-              '\$${(((_credito?['costo_inversion'] as num?)?.toDouble() ?? 0) + ((_credito?['margen_ganancia'] as num?)?.toDouble() ?? 0)).toStringAsFixed(2)}'),
-          const SizedBox(height: 8),
-          _buildInfoRow(Icons.payments, 'Saldo pendiente',
-              '\$${((_credito?['costo_inversion'] as num? ?? 0).toDouble() + (_credito?['margen_ganancia'] as num? ?? 0).toDouble() - ((_credito?['Pagos'] as List<dynamic>?)?.fold(0.0, (sum, pago) => (sum as double) + (pago['monto'] as num).toDouble()) ?? 0.0)).toStringAsFixed(2)}'),
-          const SizedBox(height: 8),
-          _buildInfoRow(
-              Icons.check_circle, 'Estado', isPagado ? 'Pagado' : 'Activo',
-              color: isPagado ? AppColors.success : AppColors.warning),
+          Card(
+            elevation: 2,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        backgroundColor: AppColors.primaryGreen.withOpacity(0.1),
+                        child: const Icon(Icons.person, color: AppColors.primaryGreen),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(cliente['nombre'] ?? 'N/A',
+                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                            Text(cliente['telefono'] ?? 'Sin teléfono',
+                                style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: isPagado ? AppColors.success.withOpacity(0.1) : AppColors.warning.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          isPagado ? 'PAGADO' : 'ACTIVO',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: isPagado ? AppColors.success : AppColors.warning,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Card(
+            elevation: 2,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Detalles del Financiamiento', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  const Divider(height: 24),
+                  _buildInfoRow(Icons.credit_score, 'Concepto', _credito?['concepto'] ?? 'N/A'),
+                  const SizedBox(height: 12),
+                  _buildInfoRow(Icons.calendar_today, 'Fecha de inicio',
+                      _credito?['fecha_inicio'] != null
+                          ? _formatFecha(_credito!['fecha_inicio'])
+                          : 'N/A'),
+                  const SizedBox(height: 12),
+                  _buildInfoRow(Icons.calendar_month, 'Fecha límite',
+                      _credito?['fecha_limite'] != null
+                          ? _formatFecha(_credito!['fecha_limite'])
+                          : 'N/A'),
+                  const SizedBox(height: 12),
+                  _buildInfoRow(Icons.monetization_on, 'Monto total',
+                      '\$${(((_credito?['costo_inversion'] as num?)?.toDouble() ?? 0) + ((_credito?['margen_ganancia'] as num?)?.toDouble() ?? 0)).toStringAsFixed(2)}',
+                      isBold: true),
+                  const SizedBox(height: 12),
+                  _buildInfoRow(Icons.payments, 'Saldo pendiente',
+                      '\$${((_credito?['costo_inversion'] as num? ?? 0).toDouble() + (_credito?['margen_ganancia'] as num? ?? 0).toDouble() - ((_credito?['Pagos'] as List<dynamic>?)?.fold(0.0, (sum, pago) => (sum as double) + (pago['monto'] as num).toDouble()) ?? 0.0)).toStringAsFixed(2)}',
+                      color: AppColors.error,
+                      isBold: true),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -291,38 +343,124 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
   Widget _buildDetallesTab() {
     final List<dynamic> rawCuotas = _credito?['Cuotas'] ?? [];
     final List<dynamic> rawPagos = _credito?['Pagos'] ?? [];
+    final String tipoCredito = _credito?['tipo_credito'] ?? 'cuotas';
+    final bool esUnico = tipoCredito == 'unico';
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text('Cuotas',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          if (rawCuotas.isEmpty) const Text('No hay cuotas registradas.'),
-          for (var cuota in rawCuotas)
+          Text(esUnico ? 'Monto a Pagar' : 'Cuotas',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          if (rawCuotas.isEmpty)
             Card(
-              color: Colors.white,
-              child: ListTile(
-                title: Text(
-                    'Cuota ${cuota['numero_cuota'] ?? 'N/A'} - \$${(cuota['monto'] as num?)?.toStringAsFixed(2) ?? '0.00'}'),
-                subtitle: Text(
-                    'Fecha: ${cuota['fecha_pago'] ?? 'N/A'} - ${cuota['pagada'] == true ? 'Pagada' : 'Pendiente'}'),
+              elevation: 1,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: const Padding(
+                padding: EdgeInsets.all(16),
+                child: Center(child: Text('No hay registros vinculados.', style: TextStyle(color: Colors.grey))),
               ),
             ),
-          const SizedBox(height: 20),
+          for (var cuota in rawCuotas)
+            Card(
+              elevation: 2,
+              margin: const EdgeInsets.only(bottom: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(
+                  color: cuota['pagada'] == true ? AppColors.success.withOpacity(0.5) : Colors.transparent,
+                ),
+              ),
+              child: ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: cuota['pagada'] == true ? AppColors.success.withOpacity(0.1) : AppColors.warning.withOpacity(0.1),
+                  child: Icon(
+                    cuota['pagada'] == true ? Icons.check_circle : Icons.schedule,
+                    color: cuota['pagada'] == true ? AppColors.success : AppColors.warning,
+                  ),
+                ),
+                title: Text(
+                    esUnico ? 'Total a Pagar' : 'Cuota ${cuota['numero_cuota'] ?? 'N/A'}',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                subtitle: Text('Vence: ${_formatFecha(cuota['fecha_pago'])}'),
+                trailing: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '\$${(cuota['monto'] as num?)?.toStringAsFixed(2) ?? '0.00'}',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                    Text(
+                      cuota['pagada'] == true ? 'Pagada' : 'Pendiente',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: cuota['pagada'] == true ? AppColors.success : AppColors.warning,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          const SizedBox(height: 24),
           const Text('Historial de Pagos',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          if (rawPagos.isEmpty) const Text('No hay pagos registrados.'),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          if (rawPagos.isEmpty)
+            Card(
+              elevation: 1,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: const Padding(
+                padding: EdgeInsets.all(16),
+                child: Center(child: Text('No hay pagos registrados aún.', style: TextStyle(color: Colors.grey))),
+              ),
+            ),
           for (var pago in rawPagos)
             Card(
-              child: ListTile(
-                title: Text(
-                    '\$${(pago['monto'] as num?)?.toStringAsFixed(2) ?? '0.00'}'),
-                subtitle: Text('Fecha: ${pago['fecha_pago_real'] ?? 'N/A'}'),
-                trailing: Text(pago['metodo']?.toString() ?? ''),
+              elevation: 2,
+              margin: const EdgeInsets.only(bottom: 10),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              backgroundColor: AppColors.primaryGreen.withOpacity(0.1),
+                              radius: 16,
+                              child: const Icon(Icons.attach_money, size: 18, color: AppColors.primaryGreen),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              esUnico ? 'Abono' : 'Pago de Cuota',
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                            ),
+                          ],
+                        ),
+                        Text(
+                          '\$${(pago['monto'] as num?)?.toStringAsFixed(2) ?? '0.00'}',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.primaryGreen),
+                        ),
+                      ],
+                    ),
+                    const Divider(height: 20),
+                    _buildDetalleRow('Fecha', _formatFechaHora(pago['fecha_pago_real'])),
+                    if (pago['metodo_pago'] != null)
+                      _buildDetalleRow('Forma de Pago', pago['metodo_pago'].toString().capitalize()),
+                    if (pago['referencia'] != null && pago['referencia'].toString().isNotEmpty)
+                      _buildDetalleRow('Referencia', pago['referencia'].toString()),
+                    if (pago['observaciones'] != null && pago['observaciones'].toString().isNotEmpty)
+                      _buildDetalleRow('Descripción', pago['observaciones'].toString()),
+                  ],
+                ),
               ),
             ),
         ],
@@ -437,6 +575,16 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
     if (fechaStr == null) return 'N/A';
     try {
       return DateFormat('dd/MM/yyyy').format(DateTime.parse(fechaStr));
+    } catch (_) {
+      return fechaStr;
+    }
+  }
+
+  // Helper para formatear fechas ISO a dd/MM/yyyy HH:mm
+  String _formatFechaHora(String? fechaStr) {
+    if (fechaStr == null) return 'N/A';
+    try {
+      return DateFormat('dd/MM/yyyy, HH:mm').format(DateTime.parse(fechaStr).toLocal());
     } catch (_) {
       return fechaStr;
     }
