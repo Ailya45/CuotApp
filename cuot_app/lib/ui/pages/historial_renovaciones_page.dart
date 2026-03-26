@@ -515,8 +515,8 @@ class _HistorialRenovacionesPageState extends State<HistorialRenovacionesPage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 100,
+          Flexible(
+            flex: 4,
             child: Text(
               '$label:',
               style: TextStyle(
@@ -525,13 +525,16 @@ class _HistorialRenovacionesPageState extends State<HistorialRenovacionesPage> {
               ),
             ),
           ),
-          Expanded(
+          const SizedBox(width: 8),
+          Flexible(
+            flex: 6,
             child: Text(
               value,
               style: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),
+              textAlign: TextAlign.end,
             ),
           ),
         ],
@@ -541,14 +544,26 @@ class _HistorialRenovacionesPageState extends State<HistorialRenovacionesPage> {
 
   Widget _buildCondRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
+      padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(fontSize: 12)),
-          Text(value,
-              style: const TextStyle(
-                  fontSize: 12, fontWeight: FontWeight.bold)),
+          Expanded(
+            flex: 5,
+            child: Text(
+              label,
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            flex: 5,
+            child: Text(
+              value,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.end,
+            ),
+          ),
         ],
       ),
     );

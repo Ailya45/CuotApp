@@ -646,7 +646,7 @@ class _TarjetaFinanciamientoState extends State<TarjetaFinanciamiento> {
           final fechaNext = proximaCuota.first.fechaPago;
           final diff = fechaNext.difference(hoy).inDays;
           if (diff <= 0) return 'Hoy vence tu próxima cuota';
-          return 'Próxima cuota en $diff (días)';
+          return 'Próxima cuota en $diff días';
         }
         return 'Estás al día con tus pagos';
       default:

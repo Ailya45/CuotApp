@@ -365,40 +365,8 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
           _fechaRenovacion = picked;
         });
       }
-    } catch (e, stack) {
+    } catch (e) {
       debugPrint('Error en selector de fecha límite: $e');
-      debugPrint('$stack');
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Error al seleccionar fecha. Intente de nuevo.'),
-        backgroundColor: Colors.red,
-      ));
-    }
-  }
-
-  Future<void> _seleccionarFechaRenovacion() async {
-    try {
-      Locale pickerLocale;
-      try {
-        pickerLocale = Localizations.localeOf(context);
-      } catch (_) {
-        pickerLocale = const Locale('es', 'ES');
-      }
-
-      final DateTime? picked = await showDatePicker(
-        context: context,
-        initialDate: _fechaRenovacion ?? DateTime.now(),
-        firstDate: DateTime(2000),
-        lastDate: DateTime.now().add(const Duration(days: 365 * 10)),
-        locale: pickerLocale,
-      );
-      if (picked != null) {
-        setState(() {
-          _fechaRenovacion = picked;
-        });
-      }
-    } catch (e, stack) {
-      debugPrint('Error en selector de fecha renovacion: $e');
-      debugPrint('$stack');
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text('Error al seleccionar fecha. Intente de nuevo.'),
         backgroundColor: Colors.red,
@@ -503,8 +471,7 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
           'plazo': _tipoCredito == 'unico' ? 1 : _cuotasEditables.length,
           'incluye_mora': _incluirMora,
           'monto_mora': _incluirMora ? _montoMora : 0,
-          if (_fechaRenovacion != null)
-            'fecha_renovacion': _fechaRenovacion!.toIso8601String(),
+          'fecha_renovacion': DateTime.now().toIso8601String(),
           if (_tipoCredito == 'unico')
             'fecha_pago_nueva': _fechaLimiteNueva?.toIso8601String(),
           if (_tipoCredito == 'cuotas') 'cuotas_renovadas': cuotasParaGuardar,
@@ -830,38 +797,7 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
                         ),
                       ],
 
-                      const SizedBox(height: 12),
 
-                      const Text('Fecha de Renovación',
-                          style: TextStyle(
-                              fontWeight: FontWeight.w600, fontSize: 14)),
-                      const SizedBox(height: 8),
-                      InkWell(
-                        onTap: _seleccionarFechaRenovacion,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 12),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.grey.shade400),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.calendar_month,
-                                  color: AppColors.primaryGreen, size: 20),
-                              const SizedBox(width: 12),
-                              Text(
-                                _fechaRenovacion != null
-                                    ? DateFormat('dd/MM/yyyy')
-                                        .format(_fechaRenovacion!)
-                                    : 'Seleccionar fecha',
-                                style: const TextStyle(fontSize: 15),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
 
                       const SizedBox(height: 10),
                       Text(

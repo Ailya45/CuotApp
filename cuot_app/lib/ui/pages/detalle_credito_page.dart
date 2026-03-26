@@ -265,16 +265,20 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
               Icons.credit_score, 'Concepto', _credito?['concepto'] ?? 'N/A'),
           const SizedBox(height: 8),
           _buildInfoRow(Icons.calendar_today, 'Fecha de inicio',
-              _credito?['fecha_inicio'] ?? 'N/A'),
+              _credito?['fecha_inicio'] != null
+                  ? _formatFecha(_credito!['fecha_inicio'])
+                  : 'N/A'),
           const SizedBox(height: 8),
           _buildInfoRow(Icons.calendar_month, 'Fecha límite',
-              _credito?['fecha_limite'] ?? 'N/A'),
+              _credito?['fecha_limite'] != null
+                  ? _formatFecha(_credito!['fecha_limite'])
+                  : 'N/A'),
           const SizedBox(height: 8),
           _buildInfoRow(Icons.monetization_on, 'Monto total',
-              '\$${((_credito?['costo_inversion'] as num?)?.toDouble() ?? 0) + ((_credito?['margen_ganancia'] as num?)?.toDouble() ?? 0)}'),
+              '\$${(((_credito?['costo_inversion'] as num?)?.toDouble() ?? 0) + ((_credito?['margen_ganancia'] as num?)?.toDouble() ?? 0)).toStringAsFixed(2)}'),
           const SizedBox(height: 8),
           _buildInfoRow(Icons.payments, 'Saldo pendiente',
-              '\$${(_credito?['costo_inversion'] as num? ?? 0) + (_credito?['margen_ganancia'] as num? ?? 0) - ((_credito?['Pagos'] as List<dynamic>?)?.fold(0.0, (sum, pago) => (sum as double) + (pago['monto'] as num).toDouble()) ?? 0.0)}'),
+              '\$${((_credito?['costo_inversion'] as num? ?? 0).toDouble() + (_credito?['margen_ganancia'] as num? ?? 0).toDouble() - ((_credito?['Pagos'] as List<dynamic>?)?.fold(0.0, (sum, pago) => (sum as double) + (pago['monto'] as num).toDouble()) ?? 0.0)).toStringAsFixed(2)}'),
           const SizedBox(height: 8),
           _buildInfoRow(
               Icons.check_circle, 'Estado', isPagado ? 'Pagado' : 'Activo',
@@ -421,51 +425,90 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
     );
   }
 
+  // Helper para formatear montos de forma segura
+  String _formatMonto(dynamic value) {
+    if (value == null) return 'N/A';
+    final num? n = value is num ? value : num.tryParse(value.toString());
+    return n != null ? '\$${n.toStringAsFixed(2)}' : '\$$value';
+  }
+
+  // Helper para formatear fechas ISO a dd/MM/yyyy
+  String _formatFecha(String? fechaStr) {
+    if (fechaStr == null) return 'N/A';
+    try {
+      return DateFormat('dd/MM/yyyy').format(DateTime.parse(fechaStr));
+    } catch (_) {
+      return fechaStr;
+    }
+  }
+
   List<Widget> _formatCondiciones(Map<String, dynamic> condiciones,
       {required bool isAnterior}) {
     List<Widget> widgets = [];
     final tipoCredito = condiciones['tipo_credito'] ?? 'cuotas';
 
+    // Orden definido para mostrar los campos
+    final orderedKeys = [
+      'tipo_credito', 'plazo', 'plazo_dias', 'modalidad', 'cuota',
+      'saldo_pendiente', 'monto_total', 'costo_inversion',
+      'abono', 'incluye_mora', 'monto_mora',
+      'fecha_pago_nueva', 'cuotas_renovadas', 'fecha_renovacion',
+    ];
+
     try {
-      condiciones.forEach((key, value) {
+      final seenKeys = <String>{};
+
+      for (final key in orderedKeys) {
+        if (!condiciones.containsKey(key)) continue;
+        if (seenKeys.contains(key)) continue;
+
+        final value = condiciones[key];
         String label = '';
         String displayValue = '';
 
         switch (key) {
           case 'plazo':
             if (tipoCredito == 'unico') {
-              label = 'Plazo';
-              displayValue = isAnterior
-                  ? '${condiciones['plazo_dias'] ?? 'N/A'} días'
-                  : _calcularDiasPlazo(condiciones);
+              // Para pago único en condiciones anteriores, mostrar plazo_dias
+              if (isAnterior) {
+                seenKeys.add('plazo_dias');
+                final dias = condiciones['plazo_dias'] ?? value;
+                label = 'Plazo Anterior';
+                displayValue = '$dias días';
+              } else {
+                // Para condiciones nuevas de pago único, calcular a partir de fechas
+                label = 'Plazo Nuevo';
+                displayValue = _calcularDiasPlazo(condiciones);
+              }
             } else {
-              label = 'Plazo';
+              label = isAnterior ? 'Plazo Anterior' : 'Plazo Nuevo';
               displayValue = '$value cuotas';
             }
             break;
           case 'plazo_dias':
-            if (tipoCredito == 'unico') {
-              label = 'Plazo';
+            // Solo mostrar si no fue ya procesado por 'plazo'
+            if (!seenKeys.contains('plazo_dias') && tipoCredito == 'unico') {
+              label = isAnterior ? 'Plazo Anterior' : 'Plazo Nuevo';
               displayValue = '$value días';
             }
             break;
           case 'cuota':
             if (tipoCredito != 'unico') {
               label = 'Cuota';
-              displayValue = '\$${value.toStringAsFixed(2)}';
+              displayValue = _formatMonto(value);
             }
             break;
           case 'saldo_pendiente':
-            label = 'Saldo Pendiente';
-            displayValue = '\$${value.toStringAsFixed(2)}';
+            label = 'Saldo en la fecha';
+            displayValue = _formatMonto(value);
             break;
           case 'monto_total':
             label = 'Monto Total';
-            displayValue = '\$${value.toStringAsFixed(2)}';
+            displayValue = _formatMonto(value);
             break;
           case 'costo_inversion':
             label = 'Costo de Inversión';
-            displayValue = '\$${value.toStringAsFixed(2)}';
+            displayValue = _formatMonto(value);
             break;
           case 'modalidad':
             label = 'Modalidad';
@@ -476,9 +519,10 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
             displayValue = value == 'unico' ? 'Pago Único' : 'Cuotas';
             break;
           case 'abono':
-            if (value != null && value > 0) {
+            final abonoNum = value is num ? value : num.tryParse(value.toString() );
+            if (abonoNum != null && abonoNum > 0) {
               label = 'Abono';
-              displayValue = '\$${value.toStringAsFixed(2)}';
+              displayValue = _formatMonto(value);
             }
             break;
           case 'incluye_mora':
@@ -488,33 +532,37 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
             }
             break;
           case 'monto_mora':
-            if (value != null && value > 0) {
+            final moraNum = value is num ? value : num.tryParse(value.toString());
+            if (moraNum != null && moraNum > 0) {
               label = 'Monto de Mora';
-              displayValue = '\$${value.toStringAsFixed(2)}';
+              displayValue = _formatMonto(value);
             }
             break;
           case 'fecha_pago_nueva':
             if (value != null) {
               label = 'Nueva Fecha de Pago';
-              displayValue =
-                  DateFormat('dd/MM/yyyy').format(DateTime.parse(value));
+              try {
+                displayValue = DateFormat('dd/MM/yyyy').format(DateTime.parse(value.toString()));
+              } catch (_) {
+                displayValue = value.toString();
+              }
             }
             break;
           case 'cuotas_renovadas':
-            if (value != null && value is List) {
+            if (value != null && value is List && value.isNotEmpty) {
               label = 'Cuotas Renovadas';
-              displayValue = '${value.length} cuotas';
+              displayValue = '${value.length} cuota${value.length != 1 ? 's' : ''}';
             }
             break;
           default:
-            // Ignorar otros campos
             break;
         }
 
         if (label.isNotEmpty) {
-          widgets.add(Text('$label: $displayValue'));
+          seenKeys.add(key);
+          widgets.add(_buildCondRow(label, displayValue));
         }
-      });
+      }
     } catch (e, stackTrace) {
       debugPrint('Error formateando condiciones: $e');
       debugPrint('$stackTrace');
@@ -594,14 +642,26 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
 
   Widget _buildCondRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
+      padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(fontSize: 12)),
-          Text(value,
-              style: const TextStyle(
-                  fontSize: 12, fontWeight: FontWeight.bold)),
+          Expanded(
+            flex: 5,
+            child: Text(
+              label,
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            flex: 5,
+            child: Text(
+              value,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.end,
+            ),
+          ),
         ],
       ),
     );
@@ -640,7 +700,9 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
   void _mostrarDetalleRenovacion(Renovacion renovacion) {
     final condAnteriores = renovacion.condicionesAnteriores;
     final condNuevas = renovacion.condicionesNuevas;
-    final tipoCredito = condNuevas['tipo_credito'] ?? 'cuotas';
+    final tipoCredito = condNuevas['tipo_credito'] ?? condAnteriores['tipo_credito'] ?? 'cuotas';
+    final labelTipo = tipoCredito == 'unico' ? 'Pago Único' : 'Cuota Fija';
+    final colorEstado = _getColorEstado(renovacion.estado ?? '');
 
     showModalBottomSheet(
       context: context,
@@ -648,7 +710,7 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
       backgroundColor: Colors.transparent,
       builder: (context) {
         return DraggableScrollableSheet(
-          initialChildSize: 0.75,
+          initialChildSize: 0.8,
           maxChildSize: 0.95,
           minChildSize: 0.4,
           builder: (context, scrollController) {
@@ -679,38 +741,61 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Título
+                    // Título + estado badge
                     Row(
                       children: [
                         Icon(
                           _getIconEstado(renovacion.estado ?? ''),
-                          color: _getColorEstado(renovacion.estado ?? ''),
+                          color: colorEstado,
+                          size: 28,
                         ),
                         const SizedBox(width: 8),
-                        Text(
-                          'Renovación ${DateFormat('dd/MM/yyyy').format(renovacion.fechaRenovacion)}',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                        const Expanded(
+                          child: Text(
+                            'Detalle de Renovación',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: colorEstado.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            (renovacion.estado ?? 'N/A').toUpperCase(),
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: colorEstado,
+                            ),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    const Divider(height: 24),
+
+                    // Tipo de cuota
                     Text(
-                      'Estado: ${renovacion.estado?.capitalize() ?? 'Desconocido'}',
+                      'Tipo de Cuota: $labelTipo',
                       style: TextStyle(
-                        fontSize: 14,
-                        color: _getColorEstado(renovacion.estado ?? ''),
-                        fontWeight: FontWeight.w500,
-                      ),
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                          fontWeight: FontWeight.bold),
                     ),
+                    const SizedBox(height: 8),
 
-                    const SizedBox(height: 16),
-
-                    // Fecha de Renovación
+                    // Info general
                     _buildDetalleRow(
-                      'Fecha de Renovación',
+                      'Motivo',
+                      renovacion.motivo ?? 'Sin motivo',
+                    ),
+                    _buildDetalleRow(
+                      'Fecha',
                       DateFormat('dd/MM/yyyy HH:mm')
                           .format(renovacion.fechaRenovacion),
                     ),
@@ -719,11 +804,12 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
 
                     // Condiciones Anteriores
                     Text(
-                        tipoCredito == 'unico'
-                            ? 'Condiciones Anteriores (Pago Único)'
-                            : 'Condiciones Anteriores',
-                        style: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold)),
+                      tipoCredito == 'unico'
+                          ? 'Condiciones Anteriores (Pago Único)'
+                          : 'Condiciones Anteriores',
+                      style: const TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.bold),
+                    ),
                     const SizedBox(height: 8),
                     Card(
                       color: Colors.red.shade50,
@@ -733,18 +819,25 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
                           children: [
                             if (tipoCredito == 'unico') ...[
                               _buildCondRow(
-                                  'Plazo Anterior',
-                                  _formatPlazoDias(
-                                      condAnteriores['plazo_dias'] ??
-                                          condAnteriores['plazo'])),
+                                'Plazo Anterior',
+                                _formatPlazoDias(
+                                    condAnteriores['plazo_dias'] ??
+                                        condAnteriores['plazo']),
+                              ),
                             ] else ...[
-                              _buildCondRow('Plazo Anterior',
-                                  '${condAnteriores['plazo'] ?? 'N/A'} cuotas'),
-                              _buildCondRow('Cuota',
-                                  '\$${(condAnteriores['cuota'] as num?)?.toStringAsFixed(2) ?? 'N/A'}'),
+                              _buildCondRow(
+                                'Plazo Anterior',
+                                '${condAnteriores['plazo'] ?? 'N/A'} cuotas',
+                              ),
+                              _buildCondRow(
+                                'Cuota',
+                                _formatMonto(condAnteriores['cuota']),
+                              ),
                             ],
-                            _buildCondRow('Saldo en la fecha',
-                                '\$${(condAnteriores['saldo_pendiente'] as num?)?.toStringAsFixed(2) ?? 'N/A'}'),
+                            _buildCondRow(
+                              'Saldo en la fecha',
+                              _formatMonto(condAnteriores['saldo_pendiente']),
+                            ),
                           ],
                         ),
                       ),
@@ -753,18 +846,57 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
                     const SizedBox(height: 12),
 
                     // Condiciones Nuevas
-                    const Text('Condiciones Nuevas',
-                        style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold)),
+                    const Text(
+                      'Condiciones Nuevas',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                    ),
                     const SizedBox(height: 8),
                     Card(
                       color: Colors.green.shade50,
                       child: Padding(
                         padding: const EdgeInsets.all(12),
                         child: Column(
-                          children: _formatCondiciones(
-                              renovacion.condicionesNuevas,
-                              isAnterior: false),
+                          children: [
+                            if (tipoCredito == 'unico') ...[
+                              _buildCondRow(
+                                'Nueva Fecha de Pago',
+                                condNuevas['fecha_pago_nueva'] != null
+                                    ? _formatFecha(condNuevas['fecha_pago_nueva'].toString())
+                                    : 'N/A',
+                              ),
+                              _buildCondRow(
+                                'Mora',
+                                _formatMonto(condNuevas['monto_mora']),
+                              ),
+                            ] else ...[
+                              if (condNuevas['cuotas_renovadas'] is List &&
+                                  (condNuevas['cuotas_renovadas'] as List).isNotEmpty)
+                                _buildCondRow(
+                                  'Fecha Tope',
+                                  _getFechaTope(condNuevas['cuotas_renovadas']),
+                                ),
+                              _buildCondRow(
+                                'Cant. Cuotas Nuevas',
+                                '${condNuevas['plazo'] ?? 'N/A'}',
+                              ),
+                              _buildCondRow(
+                                'Mora',
+                                _formatMonto(condNuevas['monto_mora']),
+                              ),
+                            ],
+                            _buildCondRow(
+                              'Nuevo Total',
+                              _formatMonto(condNuevas['monto_total']),
+                            ),
+                            if (condNuevas['abono'] != null) ...[
+                              if (condNuevas['abono'] is num &&
+                                  (condNuevas['abono'] as num) > 0)
+                                _buildCondRow(
+                                  'Abono',
+                                  '\$${(condNuevas[\'abono\'] as num).toStringAsFixed(2)}',
+                                ),
+                            ],
+                          ],
                         ),
                       ),
                     ),
@@ -774,15 +906,19 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
                       const SizedBox(height: 16),
                       const Text('Observaciones',
                           style: TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.bold)),
+                              fontSize: 15, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
                       Container(
+                        width: double.infinity,
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.grey.shade50,
+                          color: Colors.grey.shade100,
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: Text(renovacion.observaciones!),
+                        child: Text(
+                          renovacion.observaciones!,
+                          style: const TextStyle(fontSize: 13),
+                        ),
                       ),
                     ],
 
@@ -795,5 +931,27 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
         );
       },
     );
+  }
+
+  String _formatPlazoDias(dynamic days) {
+    if (days == null) return 'N/A';
+    final int d = int.tryParse(days.toString()) ?? 0;
+    if (d <= 0) return 'N/A';
+    if (d >= 30 && d % 30 == 0) {
+      final meses = d ~/ 30;
+      return '$meses ${meses == 1 ? "mes" : "meses"}';
+    }
+    return '$d días';
+  }
+
+  String _getFechaTope(dynamic cuotas) {
+    if (cuotas is! List || cuotas.isEmpty) return 'N/A';
+    try {
+      final last = cuotas.last as Map<String, dynamic>;
+      final fecha = DateTime.parse(last['fecha'].toString());
+      return DateFormat('dd/MM/yyyy').format(fecha);
+    } catch (_) {
+      return 'N/A';
+    }
   }
 }

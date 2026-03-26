@@ -1,0 +1,8 @@
+                            if (condNuevas['abono'] != null) ...[
+                              if (condNuevas['abono'] is num &&
+                                  (condNuevas['abono'] as num) > 0)
+                                _buildCondRow(
+                                  'Abono',
+                                  '\$${(condNuevas[\'abono\'] as num).toStringAsFixed(2)}',
+                                ),
+                            ],

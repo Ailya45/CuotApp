@@ -61,10 +61,9 @@ class _TarjetaCreditoUnicoState extends State<TarjetaCreditoUnico> {
   }
 
   int get _diasAtrasoTotal {
-    if (widget.credito.fechaInicio == null) return 0;
     final hoy = DateTime.now();
-    final inicio = widget.credito.fechaInicio!;
-    final diferencia = hoy.difference(inicio).inDays;
+    final fechaLimite = widget.credito.fechaLimite;
+    final diferencia = hoy.difference(fechaLimite).inDays;
     return diferencia > 0 ? diferencia : 0;
   }
 
