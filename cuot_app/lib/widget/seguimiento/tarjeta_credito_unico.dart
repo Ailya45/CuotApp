@@ -54,16 +54,18 @@ class _TarjetaCreditoUnicoState extends State<TarjetaCreditoUnico> {
   }
 
   int get _diasRestantes {
-    final hoy = DateTime.now();
-    final fechaLimite = widget.credito.fechaLimite;
-    final diferencia = fechaLimite.difference(hoy).inDays;
+    final hoy = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+    final fechaLimite = DateTime(widget.credito.fechaLimite.year, widget.credito.fechaLimite.month, widget.credito.fechaLimite.day);
+    if (fechaLimite.isBefore(hoy)) return 0;
+    final diferencia = fechaLimite.difference(hoy).inDays + 1; // +1 para ser inclusive
     return diferencia > 0 ? diferencia : 0;
   }
 
   int get _diasAtrasoTotal {
-    final hoy = DateTime.now();
-    final fechaLimite = widget.credito.fechaLimite;
-    final diferencia = hoy.difference(fechaLimite).inDays;
+    final hoy = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+    final fechaLimite = DateTime(widget.credito.fechaLimite.year, widget.credito.fechaLimite.month, widget.credito.fechaLimite.day);
+    if (hoy.isBefore(fechaLimite)) return 0;
+    final diferencia = hoy.difference(fechaLimite).inDays; // El atraso legalmente suele ser exclusivo del día de vencimiento, pero lo mantenemos estándar
     return diferencia > 0 ? diferencia : 0;
   }
 

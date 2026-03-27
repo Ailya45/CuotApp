@@ -47,6 +47,7 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
 
   // Fecha de renovación (global para cálculo de mora)
   DateTime? _fechaRenovacion;
+  DateTime? _fechaInicioRenovacion; // 👈 NUEVO: Fecha de inicio de la renovación
 
   // Ganancia diaria original para cálculo de mora
   double _gananciaDiariaOriginal = 0;
@@ -265,8 +266,10 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
             _fechaLimiteNueva =
                 DateTime.parse(fechaLimiteStr).add(const Duration(days: 30));
             _fechaRenovacion = _fechaLimiteNueva;
+            _fechaInicioRenovacion = DateTime.parse(fechaLimiteStr); // De inicio es la fecha de vencimiento original
           } else {
             _fechaRenovacion = DateTime.now().add(const Duration(days: 1));
+            _fechaInicioRenovacion = DateTime.now();
           }
 
           _cuotaActual =
@@ -322,10 +325,12 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
       }
 
       final fechaRenovMidnight = DateTime(_fechaRenovacion!.year, _fechaRenovacion!.month, _fechaRenovacion!.day);
-      final fechaOriMidnight = DateTime(fechaOriginal.year, fechaOriginal.month, fechaOriginal.day);
+      final fechaIniRenovMidnight = _fechaInicioRenovacion != null 
+          ? DateTime(_fechaInicioRenovacion!.year, _fechaInicioRenovacion!.month, _fechaInicioRenovacion!.day)
+          : DateTime(fechaOriginal.year, fechaOriginal.month, fechaOriginal.day);
       
-      final int diasRetraso = fechaRenovMidnight.difference(fechaOriMidnight).inDays;
-      return diasRetraso > 0 ? diasRetraso * _gananciaDiariaOriginal : 0;
+      final int diasDiferencia = fechaRenovMidnight.difference(fechaIniRenovMidnight).inDays + 1;
+      return diasDiferencia > 0 ? diasDiferencia * _gananciaDiariaOriginal : 0;
     } catch (e, stackTrace) {
       debugPrint('Error calculando mora sugerida: $e');
       debugPrint('$stackTrace');
@@ -620,16 +625,79 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
                     children: [
                       // === SECCIÓN DINÁMICA SEGÚN TIPO ===
                       if (_tipoCredito == 'unico') ...[
-                        CustomDatePicker(
-                          selectedDate: _fechaLimiteNueva ?? DateTime.now(),
-                            onDateSelected: (picked) {
-                              setState(() {
-                                _fechaLimiteNueva = picked;
-                                _fechaRenovacion = picked;
-                                _updateMoraController();
-                              });
-                            },
-                          label: 'Seleccionar nueva fecha',
+                        GestureDetector(
+                          onTap: () async {
+                            // Step 1: Select Start Date (Default: Today)
+                            final pickedStart = await showDatePicker(
+                              context: context,
+                              initialDate: DateTime.now(),
+                              firstDate: DateTime(2000),
+                              lastDate: DateTime(2100),
+                              helpText: 'Selecciona la fecha de inicio',
+                            );
+
+                            if (pickedStart != null && mounted) {
+                              // Step 2: Select End Date (Default: Start + 30 days)
+                              final pickedEnd = await showDatePicker(
+                                context: context,
+                                initialDate: pickedStart.add(const Duration(days: 30)),
+                                firstDate: pickedStart,
+                                lastDate: DateTime(2100),
+                                helpText: 'Selecciona la fecha final',
+                              );
+
+                              if (pickedEnd != null && mounted) {
+                                setState(() {
+                                  _fechaInicioRenovacion = pickedStart;
+                                  _fechaLimiteNueva = pickedEnd;
+                                  _fechaRenovacion = pickedEnd;
+                                  _updateMoraController();
+                                });
+                              }
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey.shade300),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.calendar_month, color: AppColors.primaryGreen),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text('Rango de Renovación', 
+                                        style: TextStyle(fontSize: 12, color: Colors.grey)),
+                                      Text(
+                                        _fechaInicioRenovacion != null && _fechaLimiteNueva != null
+                                            ? '${DateFormat('dd/MM/yyyy').format(_fechaInicioRenovacion!)} - ${DateFormat('dd/MM/yyyy').format(_fechaLimiteNueva!)}'
+                                            : 'Toca para seleccionar fechas',
+                                        style: const TextStyle(fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primaryGreen.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    _fechaInicioRenovacion != null && _fechaLimiteNueva != null
+                                        ? '${_fechaLimiteNueva!.difference(DateTime(_fechaInicioRenovacion!.year, _fechaInicioRenovacion!.month, _fechaInicioRenovacion!.day)).inDays + 1} días'
+                                        : '-',
+                                    style: const TextStyle(fontSize: 12, color: AppColors.primaryGreen, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ] else ...[
                         // Nueva Fecha Vencimiento (Calculada de la última cuota)
@@ -989,8 +1057,8 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
                               : '$_plazoOriginal cuotas'),
                           _buildTableCell(
                               _tipoCredito == 'unico'
-                                  ? (_fechaLimiteNueva != null
-                                      ? '${_fechaLimiteNueva!.difference(DateTime.parse(_credito?['fecha_inicio'] ?? DateTime.now().toIso8601String())).inDays} días'
+                                  ? (_fechaLimiteNueva != null && _fechaInicioRenovacion != null
+                                      ? '${_fechaLimiteNueva!.difference(DateTime(_fechaInicioRenovacion!.year, _fechaInicioRenovacion!.month, _fechaInicioRenovacion!.day)).inDays + 1} días'
                                       : 'N/A')
                                   : '${_cuotasEditables.length} cuotas',
                               color: AppColors.primaryGreen),
