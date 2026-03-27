@@ -271,7 +271,7 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
           _cuotaActual =
               _plazoOriginal > 0 ? totalCredito / _plazoOriginal : totalCredito;
           _moraCalculada = moraCalculada;
-          _moraManualController.text = moraCalculada > 0 ? moraCalculada.toStringAsFixed(2) : '0.00';
+          _moraManualController.text = moraCalculada > 0 ? _moraSugerida.toStringAsFixed(2) : '0.00';
           _modalidadOriginal = data['modalidad_pago']?.toString() ?? 'mensual';
           _cuotasEditables = pendingCuotas;
           _isLoading = false;
@@ -611,10 +611,10 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
                           _tipoCredito == 'unico'
                               ? 'Pago Único'
                               : '$_plazoOriginal cuotas'),
-                      if (_moraCalculada > 0) ...[
+                      if (_moraSugerida > 0) ...[
                         const SizedBox(height: 8),
                         _buildReadOnlyRow(Icons.report_problem, 'Mora Sugerida',
-                            '\$${_moraCalculada.toStringAsFixed(2)}',
+                            '\$${_moraSugerida.toStringAsFixed(2)}',
                             color: AppColors.error),
                       ],
                     ],
@@ -646,7 +646,7 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
                         const SizedBox(height: 8),
                         InkWell(
                           onTap: _seleccionarFechaLimite,
-                          child: Container(
+                            child: Container(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 12, vertical: 12),
                             decoration: BoxDecoration(
@@ -893,7 +893,7 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
                                   ),
                                   if (_moraCalculada > 0)
                                     Text(
-                                      'Mora sugerida: \$${_moraCalculada.toStringAsFixed(2)}',
+                                      'Mora sugerida: \$${_moraSugerida.toStringAsFixed(2)}',
                                       style: TextStyle(
                                         fontSize: 12,
                                         color: AppColors.error,

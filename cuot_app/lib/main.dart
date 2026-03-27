@@ -196,7 +196,7 @@ class CuotApp extends StatelessWidget {
         useMaterial3: true,
         fontFamily: 'Roboto',
       ),
-      builder: (context, child) {
+      /*builder: (context, child) {
         final mediaQueryData = MediaQuery.of(context);
         return MediaQuery(
           data: mediaQueryData.copyWith(
@@ -207,7 +207,7 @@ class CuotApp extends StatelessWidget {
           ),
           child: child!,
         );
-      },
+      },*/
       home: const CuotAppLoginPage(),
     );
   }

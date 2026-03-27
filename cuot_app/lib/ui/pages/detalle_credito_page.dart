@@ -150,8 +150,8 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
             bottom: const TabBar(
               tabs: [
                 Tab(text: 'Información'),
-                Tab(text: 'Detalles'),
-                Tab(text: 'Historial'),
+                Tab(text: 'Pagos'),
+                Tab(text: 'Renovaciones'),
               ],
               indicatorColor: Colors.white,
               labelColor: Colors.white,
@@ -256,7 +256,8 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
           final fechaPago = DateTime.tryParse(cuota['fecha_pago'].toString());
           if (fechaPago != null) {
             final hoy = DateTime.now();
-            final fechaPagoDate = DateTime(fechaPago.year, fechaPago.month, fechaPago.day);
+            final fechaPagoDate =
+                DateTime(fechaPago.year, fechaPago.month, fechaPago.day);
             final hoyDate = DateTime(hoy.year, hoy.month, hoy.day);
             if (fechaPagoDate.isBefore(hoyDate)) {
               isAtrasado = true;
@@ -266,10 +267,12 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
         }
       }
       if (cuotas.isEmpty && _credito?['fecha_vencimiento'] != null) {
-        final fechaVen = DateTime.tryParse(_credito!['fecha_vencimiento'].toString());
+        final fechaVen =
+            DateTime.tryParse(_credito!['fecha_vencimiento'].toString());
         if (fechaVen != null) {
           final hoy = DateTime.now();
-          final fechaVenDate = DateTime(fechaVen.year, fechaVen.month, fechaVen.day);
+          final fechaVenDate =
+              DateTime(fechaVen.year, fechaVen.month, fechaVen.day);
           final hoyDate = DateTime(hoy.year, hoy.month, hoy.day);
           if (fechaVenDate.isBefore(hoyDate)) {
             isAtrasado = true;
@@ -278,9 +281,10 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
       }
     }
 
-    final String textoEstado = isPagado ? 'PAGADO' : (isAtrasado ? 'ATRASADO' : 'AL DÍA');
-    final Color colorEstado = isPagado 
-        ? AppColors.success 
+    final String textoEstado =
+        isPagado ? 'PAGADO' : (isAtrasado ? 'ATRASADO' : 'AL DÍA');
+    final Color colorEstado = isPagado
+        ? AppColors.success
         : (isAtrasado ? AppColors.error : Colors.blue.shade700);
 
     return SingleChildScrollView(
@@ -290,7 +294,8 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
         children: [
           Card(
             elevation: 2,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -299,8 +304,10 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
                   Row(
                     children: [
                       CircleAvatar(
-                        backgroundColor: AppColors.primaryGreen.withOpacity(0.1),
-                        child: const Icon(Icons.person, color: AppColors.primaryGreen),
+                        backgroundColor:
+                            AppColors.primaryGreen.withOpacity(0.1),
+                        child: const Icon(Icons.person,
+                            color: AppColors.primaryGreen),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -308,14 +315,17 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(cliente['nombre'] ?? 'N/A',
-                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                                style: const TextStyle(
+                                    fontSize: 18, fontWeight: FontWeight.bold)),
                             Text(cliente['telefono'] ?? 'Sin teléfono',
-                                style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
+                                style: TextStyle(
+                                    fontSize: 14, color: Colors.grey.shade600)),
                           ],
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 5),
                         decoration: BoxDecoration(
                           color: colorEstado.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(20),
@@ -338,32 +348,100 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
           const SizedBox(height: 16),
           Card(
             elevation: 2,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Detalles del Financiamiento', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Información',
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold)),
+                      SizedBox(
+                        width: 125,
+                        height: 35,
+                        child: 
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),  
+                          elevation: 5,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        
+                        
+
+                        onPressed: () {
+                            try {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => FormularioRenovacionPage(
+                                    creditoId: widget.creditoId,
+                                    nombreUsuario: widget.nombreUsuario!,
+                                  ),
+                                ),
+                              ).then((result) {
+                                if (result == true) {
+                                  // Recargar datos si se renovó
+                                  _loadDetalle();
+                                }
+                              });
+                            } catch (e, stackTrace) {
+                              debugPrint('Error al navegar a renovación: $e');
+                              debugPrint('$stackTrace');
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content:
+                                        Text('Error al abrir renovación: $e'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                          child: Row(
+                            children: [
+                              Icon(Icons.refresh, color: Colors.white),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Renovación',
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ],
+                          )),
+                      )
+                    ],
+                  ),
                   const Divider(height: 24),
-                  _buildInfoRow(Icons.credit_score, 'Concepto', _credito?['concepto'] ?? 'N/A'),
+                  _buildInfoRow(Icons.credit_score, 'Concepto',
+                      _credito?['concepto'] ?? 'N/A'),
                   const SizedBox(height: 12),
-                  _buildInfoRow(Icons.calendar_today, 'Fecha de inicio',
+                  _buildInfoRow(
+                      Icons.calendar_today,
+                      'Fecha de inicio',
                       _credito?['fecha_inicio'] != null
                           ? _formatFecha(_credito!['fecha_inicio'])
                           : 'N/A'),
                   const SizedBox(height: 12),
-                  _buildInfoRow(Icons.calendar_month, 'Fecha límite',
-                      (() {
-                        if (_credito?['fecha_vencimiento'] != null) {
-                          return _formatFecha(_credito!['fecha_vencimiento']);
-                        }
-                        final cuotas = _credito?['Cuotas'] as List<dynamic>? ?? [];
-                        if (cuotas.isNotEmpty) {
-                           return _formatFecha(cuotas.last['fecha_pago']);
-                        }
-                        return 'N/A';
-                      })()),
+                  _buildInfoRow(Icons.calendar_month, 'Fecha límite', (() {
+                    if (_credito?['fecha_vencimiento'] != null) {
+                      return _formatFecha(_credito!['fecha_vencimiento']);
+                    }
+                    final cuotas = _credito?['Cuotas'] as List<dynamic>? ?? [];
+                    if (cuotas.isNotEmpty) {
+                      return _formatFecha(cuotas.last['fecha_pago']);
+                    }
+                    return 'N/A';
+                  })()),
                   const SizedBox(height: 12),
                   _buildInfoRow(Icons.monetization_on, 'Monto total',
                       '\$${(((_credito?['costo_inversion'] as num?)?.toDouble() ?? 0) + ((_credito?['margen_ganancia'] as num?)?.toDouble() ?? 0)).toStringAsFixed(2)}',
@@ -371,8 +449,7 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
                   const SizedBox(height: 12),
                   _buildInfoRow(Icons.payments, 'Saldo pendiente',
                       '\$${((_credito?['costo_inversion'] as num? ?? 0).toDouble() + (_credito?['margen_ganancia'] as num? ?? 0).toDouble() - ((_credito?['Pagos'] as List<dynamic>?)?.fold(0.0, (sum, pago) => (sum as double) + (pago['monto'] as num).toDouble()) ?? 0.0)).toStringAsFixed(2)}',
-                      color: AppColors.error,
-                      isBold: true),
+                      color: AppColors.error, isBold: true),
                 ],
               ),
             ),
@@ -394,22 +471,29 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(esUnico ? 'Monto a Pagar' : 'Cuotas',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              style:
+                  const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
           if (rawCuotas.isEmpty)
             Card(
               elevation: 1,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
               child: const Padding(
                 padding: EdgeInsets.all(16),
-                child: Center(child: Text('No hay registros vinculados.', style: TextStyle(color: Colors.grey))),
+                child: Center(
+                    child: Text('No hay registros vinculados.',
+                        style: TextStyle(color: Colors.grey))),
               ),
             ),
           if (!esUnico && rawCuotas.isNotEmpty)
             Theme(
-              data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+              data:
+                  Theme.of(context).copyWith(dividerColor: Colors.transparent),
               child: ExpansionTile(
-                title: Text('Ver Lista de Cuotas (${rawCuotas.length})', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+                title: Text('Ver Lista de Cuotas (${rawCuotas.length})',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w600, fontSize: 16)),
                 tilePadding: EdgeInsets.zero,
                 initiallyExpanded: rawCuotas.length <= 5,
                 children: [
@@ -420,35 +504,47 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                         side: BorderSide(
-                          color: cuota['pagada'] == true ? AppColors.success.withOpacity(0.5) : Colors.transparent,
+                          color: cuota['pagada'] == true
+                              ? AppColors.success.withOpacity(0.5)
+                              : Colors.transparent,
                         ),
                       ),
                       child: ListTile(
                         leading: CircleAvatar(
-                          backgroundColor: cuota['pagada'] == true ? AppColors.success.withOpacity(0.1) : AppColors.warning.withOpacity(0.1),
+                          backgroundColor: cuota['pagada'] == true
+                              ? AppColors.success.withOpacity(0.1)
+                              : AppColors.warning.withOpacity(0.1),
                           child: Icon(
-                            cuota['pagada'] == true ? Icons.check_circle : Icons.schedule,
-                            color: cuota['pagada'] == true ? AppColors.success : AppColors.warning,
+                            cuota['pagada'] == true
+                                ? Icons.check_circle
+                                : Icons.schedule,
+                            color: cuota['pagada'] == true
+                                ? AppColors.success
+                                : AppColors.warning,
                           ),
                         ),
                         title: Text(
-                            'Cuota ${cuota['numero_cuota'] ?? 'N/A'}',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          'Cuota ${cuota['numero_cuota'] ?? 'N/A'}',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
-                        subtitle: Text('Vence: ${_formatFecha(cuota['fecha_pago'])}'),
+                        subtitle:
+                            Text('Vence: ${_formatFecha(cuota['fecha_pago'])}'),
                         trailing: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text(
                               '\$${(cuota['monto'] as num?)?.toStringAsFixed(2) ?? '0.00'}',
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 16),
                             ),
                             Text(
                               cuota['pagada'] == true ? 'Pagada' : 'Pendiente',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: cuota['pagada'] == true ? AppColors.success : AppColors.warning,
+                                color: cuota['pagada'] == true
+                                    ? AppColors.success
+                                    : AppColors.warning,
                               ),
                             ),
                           ],
@@ -466,18 +562,27 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                   side: BorderSide(
-                    color: cuota['pagada'] == true ? AppColors.success.withOpacity(0.5) : Colors.transparent,
+                    color: cuota['pagada'] == true
+                        ? AppColors.success.withOpacity(0.5)
+                        : Colors.transparent,
                   ),
                 ),
                 child: ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: cuota['pagada'] == true ? AppColors.success.withOpacity(0.1) : AppColors.warning.withOpacity(0.1),
+                    backgroundColor: cuota['pagada'] == true
+                        ? AppColors.success.withOpacity(0.1)
+                        : AppColors.warning.withOpacity(0.1),
                     child: Icon(
-                      cuota['pagada'] == true ? Icons.check_circle : Icons.schedule,
-                      color: cuota['pagada'] == true ? AppColors.success : AppColors.warning,
+                      cuota['pagada'] == true
+                          ? Icons.check_circle
+                          : Icons.schedule,
+                      color: cuota['pagada'] == true
+                          ? AppColors.success
+                          : AppColors.warning,
                     ),
                   ),
-                  title: const Text('Total a Pagar', style: TextStyle(fontWeight: FontWeight.bold)),
+                  title: const Text('Total a Pagar',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
                   subtitle: Text('Vence: ${_formatFecha(cuota['fecha_pago'])}'),
                   trailing: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -485,13 +590,16 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
                     children: [
                       Text(
                         '\$${(cuota['monto'] as num?)?.toStringAsFixed(2) ?? '0.00'}',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 16),
                       ),
                       Text(
                         cuota['pagada'] == true ? 'Pagada' : 'Pendiente',
                         style: TextStyle(
                           fontSize: 12,
-                          color: cuota['pagada'] == true ? AppColors.success : AppColors.warning,
+                          color: cuota['pagada'] == true
+                              ? AppColors.success
+                              : AppColors.warning,
                         ),
                       ),
                     ],
@@ -505,17 +613,21 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
           if (rawPagos.isEmpty)
             Card(
               elevation: 1,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
               child: const Padding(
                 padding: EdgeInsets.all(16),
-                child: Center(child: Text('No hay pagos registrados aún.', style: TextStyle(color: Colors.grey))),
+                child: Center(
+                    child: Text('No hay pagos registrados aún.',
+                        style: TextStyle(color: Colors.grey))),
               ),
             ),
           for (var pago in rawPagos)
             Card(
               elevation: 2,
               margin: const EdgeInsets.only(bottom: 10),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -527,31 +639,43 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
                         Row(
                           children: [
                             CircleAvatar(
-                              backgroundColor: AppColors.primaryGreen.withOpacity(0.1),
+                              backgroundColor:
+                                  AppColors.primaryGreen.withOpacity(0.1),
                               radius: 16,
-                              child: const Icon(Icons.attach_money, size: 18, color: AppColors.primaryGreen),
+                              child: const Icon(Icons.attach_money,
+                                  size: 18, color: AppColors.primaryGreen),
                             ),
                             const SizedBox(width: 8),
                             Text(
                               esUnico ? 'Abono' : 'Pago de Cuota',
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 16),
                             ),
                           ],
                         ),
                         Text(
                           '\$${(pago['monto'] as num?)?.toStringAsFixed(2) ?? '0.00'}',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.primaryGreen),
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: AppColors.primaryGreen),
                         ),
                       ],
                     ),
                     const Divider(height: 20),
-                    _buildDetalleRow('Fecha', _formatFechaHora(pago['fecha_pago_real'])),
+                    _buildDetalleRow(
+                        'Fecha', _formatFechaHora(pago['fecha_pago_real'])),
                     if (pago['metodo_pago'] != null)
-                      _buildDetalleRow('Forma de Pago', pago['metodo_pago'].toString().capitalize()),
-                    if (pago['referencia'] != null && pago['referencia'].toString().isNotEmpty)
-                      _buildDetalleRow('Referencia', pago['referencia'].toString()),
-                    if (pago['observaciones'] != null && pago['observaciones'].toString().isNotEmpty)
-                      _buildDetalleRow('Descripción', pago['observaciones'].toString()),
+                      _buildDetalleRow('Forma de Pago',
+                          pago['metodo_pago'].toString().capitalize()),
+                    if (pago['referencia'] != null &&
+                        pago['referencia'].toString().isNotEmpty)
+                      _buildDetalleRow(
+                          'Referencia', pago['referencia'].toString()),
+                    if (pago['observaciones'] != null &&
+                        pago['observaciones'].toString().isNotEmpty)
+                      _buildDetalleRow(
+                          'Descripción', pago['observaciones'].toString()),
                   ],
                 ),
               ),
@@ -617,7 +741,8 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            if (renovacion.observaciones != null && renovacion.observaciones!.isNotEmpty)
+                            if (renovacion.observaciones != null &&
+                                renovacion.observaciones!.isNotEmpty)
                               Text(
                                 renovacion.observaciones!,
                                 style: TextStyle(
@@ -631,7 +756,8 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
                           color: colorEstado.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
@@ -654,7 +780,8 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
                       Expanded(
                         child: _buildMiniInfo(
                           'Plazo',
-                          _getResumenPlazoLocal(renovacion.fechaRenovacion, renovacion.condicionesNuevas),
+                          _getResumenPlazoLocal(renovacion.fechaRenovacion,
+                              renovacion.condicionesNuevas),
                           Icons.schedule,
                         ),
                       ),
@@ -675,7 +802,8 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
                       Expanded(
                         child: _buildMiniInfo(
                           'Fecha',
-                          DateFormat('dd/MM/yy').format(renovacion.fechaRenovacion),
+                          DateFormat('dd/MM/yy')
+                              .format(renovacion.fechaRenovacion),
                           Icons.event,
                         ),
                       ),
@@ -708,7 +836,8 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
     }
   }
 
-  String _getResumenPlazoLocal(DateTime fechaRen, Map<String, dynamic> condNuevas) {
+  String _getResumenPlazoLocal(
+      DateTime fechaRen, Map<String, dynamic> condNuevas) {
     final tipo = condNuevas['tipo_credito'] ?? 'cuotas';
     if (tipo == 'unico') {
       final fechaNueva = condNuevas['fecha_pago_nueva'];
@@ -766,7 +895,8 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
   String _formatFechaHora(String? fechaStr) {
     if (fechaStr == null) return 'N/A';
     try {
-      return DateFormat('dd/MM/yyyy, HH:mm').format(DateTime.parse(fechaStr).toLocal());
+      return DateFormat('dd/MM/yyyy, HH:mm')
+          .format(DateTime.parse(fechaStr).toLocal());
     } catch (_) {
       return fechaStr;
     }
@@ -779,10 +909,20 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
 
     // Orden definido para mostrar los campos
     final orderedKeys = [
-      'tipo_credito', 'plazo', 'plazo_dias', 'modalidad', 'cuota',
-      'saldo_pendiente', 'monto_total', 'costo_inversion',
-      'abono', 'incluye_mora', 'monto_mora',
-      'fecha_pago_nueva', 'cuotas_renovadas', 'fecha_renovacion',
+      'tipo_credito',
+      'plazo',
+      'plazo_dias',
+      'modalidad',
+      'cuota',
+      'saldo_pendiente',
+      'monto_total',
+      'costo_inversion',
+      'abono',
+      'incluye_mora',
+      'monto_mora',
+      'fecha_pago_nueva',
+      'cuotas_renovadas',
+      'fecha_renovacion',
     ];
 
     try {
@@ -849,7 +989,8 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
             displayValue = value == 'unico' ? 'Pago Único' : 'Cuotas';
             break;
           case 'abono':
-            final abonoNum = value is num ? value : num.tryParse(value.toString() );
+            final abonoNum =
+                value is num ? value : num.tryParse(value.toString());
             if (abonoNum != null && abonoNum > 0) {
               label = 'Abono';
               displayValue = _formatMonto(value);
@@ -862,7 +1003,8 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
             }
             break;
           case 'monto_mora':
-            final moraNum = value is num ? value : num.tryParse(value.toString());
+            final moraNum =
+                value is num ? value : num.tryParse(value.toString());
             if (moraNum != null && moraNum > 0) {
               label = 'Monto de Mora';
               displayValue = _formatMonto(value);
@@ -872,7 +1014,8 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
             if (value != null) {
               label = 'Nueva Fecha de Pago';
               try {
-                displayValue = DateFormat('dd/MM/yyyy').format(DateTime.parse(value.toString()));
+                displayValue = DateFormat('dd/MM/yyyy')
+                    .format(DateTime.parse(value.toString()));
               } catch (_) {
                 displayValue = value.toString();
               }
@@ -881,7 +1024,8 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
           case 'cuotas_renovadas':
             if (value != null && value is List && value.isNotEmpty) {
               label = 'Cuotas Renovadas';
-              displayValue = '${value.length} cuota${value.length != 1 ? 's' : ''}';
+              displayValue =
+                  '${value.length} cuota${value.length != 1 ? 's' : ''}';
             }
             break;
           default:
@@ -970,11 +1114,12 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
     );
   }
 
-  Widget _buildListaCuotasMini(List<dynamic> cuotas, {required bool isAnterior}) {
+  Widget _buildListaCuotasMini(List<dynamic> cuotas,
+      {required bool isAnterior}) {
     if (cuotas.isEmpty) return const SizedBox.shrink();
-    
+
     List<dynamic> parsedCuotas = List.from(cuotas);
-    parsedCuotas.sort((a,b) {
+    parsedCuotas.sort((a, b) {
       int idxA = a['numero_cuota'] ?? a['numero'] ?? 0;
       int idxB = b['numero_cuota'] ?? b['numero'] ?? 0;
       return idxA.compareTo(idxB);
@@ -985,8 +1130,11 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(isAnterior ? 'Cuotas Anteriores:' : 'Nuevas Cuotas:', 
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey.shade800)),
+          Text(isAnterior ? 'Cuotas Anteriores:' : 'Nuevas Cuotas:',
+              style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey.shade800)),
           const SizedBox(height: 4),
           ...parsedCuotas.map((c) {
             final n = c['numero_cuota'] ?? c['numero'] ?? '?';
@@ -999,8 +1147,11 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text('Cuota $n', style: const TextStyle(fontSize: 12)),
-                  Text(fStr, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                  Text('\$${(m as num).toStringAsFixed(2)}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  Text(fStr,
+                      style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                  Text('\$${(m as num).toStringAsFixed(2)}',
+                      style: const TextStyle(
+                          fontSize: 12, fontWeight: FontWeight.bold)),
                 ],
               ),
             );
@@ -1070,7 +1221,9 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
   void _mostrarDetalleRenovacion(Renovacion renovacion) {
     final condAnteriores = renovacion.condicionesAnteriores;
     final condNuevas = renovacion.condicionesNuevas;
-    final tipoCredito = condNuevas['tipo_credito'] ?? condAnteriores['tipo_credito'] ?? 'cuotas';
+    final tipoCredito = condNuevas['tipo_credito'] ??
+        condAnteriores['tipo_credito'] ??
+        'cuotas';
     final labelTipo = tipoCredito == 'unico' ? 'Pago Único' : 'Cuota Fija';
     final colorEstado = _getColorEstado(renovacion.estado ?? '');
 
@@ -1188,16 +1341,21 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
                         child: Column(
                           children: [
                             if (condAnteriores['fecha_inicio'] != null)
-                              _buildCondRow('Fecha Inicio', _formatFecha(condAnteriores['fecha_inicio'].toString())),
+                              _buildCondRow(
+                                  'Fecha Inicio',
+                                  _formatFecha(condAnteriores['fecha_inicio']
+                                      .toString())),
                             if (condAnteriores['fecha_vencimiento'] != null)
-                              _buildCondRow('Fecha Límite Org.', _formatFecha(condAnteriores['fecha_vencimiento'].toString())),
-                            
+                              _buildCondRow(
+                                  'Fecha Límite Org.',
+                                  _formatFecha(
+                                      condAnteriores['fecha_vencimiento']
+                                          .toString())),
                             if (tipoCredito == 'unico') ...[
                               _buildCondRow(
                                 'Plazo Anterior',
-                                _formatPlazoDias(
-                                    condAnteriores['plazo_dias'] ??
-                                        condAnteriores['plazo']),
+                                _formatPlazoDias(condAnteriores['plazo_dias'] ??
+                                    condAnteriores['plazo']),
                               ),
                             ] else ...[
                               _buildCondRow(
@@ -1213,9 +1371,13 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
                               'Saldo en la fecha',
                               _formatMonto(condAnteriores['saldo_pendiente']),
                             ),
-                            
-                            if (tipoCredito == 'cuotas' && condAnteriores['cuotas_anteriores'] is List && (condAnteriores['cuotas_anteriores'] as List).isNotEmpty)
-                              _buildListaCuotasMini(condAnteriores['cuotas_anteriores'] as List, isAnterior: true),
+                            if (tipoCredito == 'cuotas' &&
+                                condAnteriores['cuotas_anteriores'] is List &&
+                                (condAnteriores['cuotas_anteriores'] as List)
+                                    .isNotEmpty)
+                              _buildListaCuotasMini(
+                                  condAnteriores['cuotas_anteriores'] as List,
+                                  isAnterior: true),
                           ],
                         ),
                       ),
@@ -1226,7 +1388,8 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
                     // Condiciones Nuevas
                     const Text(
                       'Condiciones Nuevas',
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                      style:
+                          TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),
                     Card(
@@ -1239,17 +1402,24 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
                               _buildCondRow(
                                 'Nueva Fecha de Pago',
                                 condNuevas['fecha_pago_nueva'] != null
-                                    ? _formatFecha(condNuevas['fecha_pago_nueva'].toString())
+                                    ? _formatFecha(
+                                        condNuevas['fecha_pago_nueva']
+                                            .toString())
                                     : 'N/A',
                               ),
-                              if (condNuevas['monto_mora'] != null && (num.tryParse(condNuevas['monto_mora'].toString()) ?? 0) > 0)
+                              if (condNuevas['monto_mora'] != null &&
+                                  (num.tryParse(condNuevas['monto_mora']
+                                              .toString()) ??
+                                          0) >
+                                      0)
                                 _buildCondRow(
                                   'Mora',
                                   _formatMonto(condNuevas['monto_mora']),
                                 ),
                             ] else ...[
                               if (condNuevas['cuotas_renovadas'] is List &&
-                                  (condNuevas['cuotas_renovadas'] as List).isNotEmpty)
+                                  (condNuevas['cuotas_renovadas'] as List)
+                                      .isNotEmpty)
                                 _buildCondRow(
                                   'Fecha Tope',
                                   _getFechaTope(condNuevas['cuotas_renovadas']),
@@ -1258,7 +1428,11 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
                                 'Cant. Cuotas Nuevas',
                                 '${condNuevas['plazo'] ?? 'N/A'}',
                               ),
-                              if (condNuevas['monto_mora'] != null && (num.tryParse(condNuevas['monto_mora'].toString()) ?? 0) > 0)
+                              if (condNuevas['monto_mora'] != null &&
+                                  (num.tryParse(condNuevas['monto_mora']
+                                              .toString()) ??
+                                          0) >
+                                      0)
                                 _buildCondRow(
                                   'Mora',
                                   _formatMonto(condNuevas['monto_mora']),
@@ -1268,14 +1442,21 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
                               'Nuevo Total',
                               _formatMonto(condNuevas['monto_total']),
                             ),
-                            if (condNuevas['abono'] != null && (num.tryParse(condNuevas['abono'].toString()) ?? 0) > 0)
+                            if (condNuevas['abono'] != null &&
+                                (num.tryParse(condNuevas['abono'].toString()) ??
+                                        0) >
+                                    0)
                               _buildCondRow(
                                 'Abono',
                                 _formatMonto(condNuevas['abono']),
                               ),
-                            
-                            if (tipoCredito == 'cuotas' && condNuevas['cuotas_renovadas'] is List && (condNuevas['cuotas_renovadas'] as List).isNotEmpty)
-                              _buildListaCuotasMini(condNuevas['cuotas_renovadas'] as List, isAnterior: false),
+                            if (tipoCredito == 'cuotas' &&
+                                condNuevas['cuotas_renovadas'] is List &&
+                                (condNuevas['cuotas_renovadas'] as List)
+                                    .isNotEmpty)
+                              _buildListaCuotasMini(
+                                  condNuevas['cuotas_renovadas'] as List,
+                                  isAnterior: false),
                           ],
                         ),
                       ),
