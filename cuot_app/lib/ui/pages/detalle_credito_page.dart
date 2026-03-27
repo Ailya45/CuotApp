@@ -353,6 +353,44 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
                   const Text('Información',
                       style: TextStyle(
                           fontSize: 16, fontWeight: FontWeight.bold)),
+                  if (widget.nombreUsuario != null && !isPagado)
+                    SizedBox(
+                      height: 32,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => FormularioRenovacionPage(
+                                creditoId: widget.creditoId,
+                                nombreUsuario: widget.nombreUsuario!,
+                              ),
+                            ),
+                          ).then((result) {
+                            if (result == true) {
+                              _loadDetalle();
+                            }
+                          });
+                        },
+                        icon: const Icon(Icons.refresh, color: Colors.white, size: 16),
+                        label: const Text(
+                          'Renovación',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue.shade700,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          elevation: 1,
+                        ),
+                      ),
+                    ),
                 ],
               ),
               const Divider(height: 24),
@@ -385,46 +423,6 @@ class _DetalleCreditoPageState extends State<DetalleCreditoPage> {
               _buildInfoRow(Icons.payments, 'Saldo pendiente',
                   '\$${((_credito?['costo_inversion'] as num? ?? 0).toDouble() + (_credito?['margen_ganancia'] as num? ?? 0).toDouble() - ((_credito?['Pagos'] as List<dynamic>?)?.fold(0.0, (sum, pago) => (sum as double) + (pago['monto'] as num).toDouble()) ?? 0.0)).toStringAsFixed(2)}',
                   color: AppColors.error, isBold: true),
-              const SizedBox(height: 20),
-              // Botón de Renovación Azul solicitado por el usuario
-              if (widget.nombreUsuario != null && !isPagado)
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => FormularioRenovacionPage(
-                            creditoId: widget.creditoId,
-                            nombreUsuario: widget.nombreUsuario!,
-                          ),
-                        ),
-                      ).then((result) {
-                        if (result == true) {
-                          _loadDetalle();
-                        }
-                      });
-                    },
-                    icon: const Icon(Icons.refresh, color: Colors.white),
-                    label: const Text(
-                      'Renovación',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue.shade700,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      elevation: 2,
-                    ),
-                  ),
-                ),
             ],
           ),
         ),
