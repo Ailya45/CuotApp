@@ -475,6 +475,10 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
     }
   }
 
+  void _updateMoraController() {
+    _moraManualController.text = _moraSugerida.toStringAsFixed(2);
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -618,12 +622,13 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
                       if (_tipoCredito == 'unico') ...[
                         CustomDatePicker(
                           selectedDate: _fechaLimiteNueva ?? DateTime.now(),
-                          onDateSelected: (picked) {
-                            setState(() {
-                              _fechaLimiteNueva = picked;
-                              _fechaRenovacion = picked;
-                            });
-                          },
+                            onDateSelected: (picked) {
+                              setState(() {
+                                _fechaLimiteNueva = picked;
+                                _fechaRenovacion = picked;
+                                _updateMoraController();
+                              });
+                            },
                           label: 'Seleccionar nueva fecha',
                         ),
                       ] else ...[
@@ -756,11 +761,6 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
 
 
                       const SizedBox(height: 10),
-                      Text(
-                          'Mora sugerida: \$${_moraSugerida.toStringAsFixed(2)}',
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.error)),
 
                       const SizedBox(height: 16),
                       const Text('Abono en la Renovación (\$)',
@@ -830,14 +830,6 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
                                       fontSize: 14,
                                     ),
                                   ),
-                                  if (_moraCalculada > 0)
-                                    Text(
-                                      'Mora sugerida: \$${_moraSugerida.toStringAsFixed(2)}',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: AppColors.error,
-                                      ),
-                                    ),
                                 ],
                               ),
                             ),
@@ -848,9 +840,22 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
                       if (_incluirMora) ...[
                         const SizedBox(height: 16),
                         // Monto de Mora (Editable)
-                        const Text('Monto de Mora a Incluir (\$)',
-                            style: TextStyle(
-                                fontWeight: FontWeight.w600, fontSize: 14)),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Monto de Mora a Incluir (\$)',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w600, fontSize: 14)),
+                            Text(
+                              'Sugerido: \$${_moraSugerida.toStringAsFixed(2)}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.error,
+                              ),
+                            ),
+                          ],
+                        ),
                         const SizedBox(height: 8),
                         TextFormField(
                           controller: _moraManualController,

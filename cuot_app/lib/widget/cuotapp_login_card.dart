@@ -36,7 +36,7 @@ class BiometricAuthService {
             'Autentícate para guardar tu huella y acceder más rápido',
         options: const AuthenticationOptions(
           stickyAuth: true,
-          biometricOnly: true,
+          biometricOnly: false,
         ),
       );
       return isAuthenticated;
