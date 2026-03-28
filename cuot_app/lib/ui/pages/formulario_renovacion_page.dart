@@ -74,7 +74,7 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
 
     // Listeners para auto-ajuste de cuotas
     _abonoController.addListener(_onParametroCambiado);
-    _moraManualController.addListener(_onParametroCambiado);
+    // _moraManualController se maneja vía onChanged para evitar loops de cursor
   }
 
   void _onParametroCambiado() {
@@ -974,6 +974,9 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
                           onChanged: (val) {
                             setState(() {
                               _moraEditadaManualmente = true; // 👈 Marcamos que el usuario editó el campo
+                              if (_tipoCredito == 'cuotas') {
+                                _repartirMontoEntreCuotas();
+                              }
                             });
                           },
                           validator: (value) {
