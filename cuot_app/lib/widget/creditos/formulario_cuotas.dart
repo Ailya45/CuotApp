@@ -844,7 +844,7 @@ class _FormularioCuotasState extends State<FormularioCuotas> {
   }
 
   /// 📌 ACTUALIZAR CRÉDITO (callback)
-  void _actualizarCredito([_]) {
+  void _actualizarCredito([dynamic _]) {
     _calcularFechaLimite();
     
     if (_formKey.currentState?.validate() ?? false) {
@@ -855,7 +855,7 @@ class _FormularioCuotasState extends State<FormularioCuotas> {
         fechaInicio: _fechaInicio,
         modalidadPago: _modalidadSeleccionada,
         nombreCliente: _clienteController.text,
-        telefono: _mostrarTelefono ? _telefonoController.text : '', // 👈 Condicional
+        telefono: _mostrarTelefono ? _telefonoController.text : '',
         numeroCuotas: _numCuotas,
         facturaPath: _facturaSeleccionada?.path,
         nombreFactura: _facturaSeleccionada?.path.split('/').last,
