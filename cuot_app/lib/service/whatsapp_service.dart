@@ -39,6 +39,8 @@ class WhatsappService {
       modalidadSection += '* ${entry.key}$check\n';
     }
 
+    final String diasText = resta.abs() < 0.01 ? '✅ *Pagado*' : diasRestantes;
+    
     return '''*Ficha de Préstamo*
 
 Cliente: *$nombreCliente*
@@ -63,7 +65,7 @@ Cant. Abonos: *$cantidadAbonos*
 Monto Abonado: *\$${montoAbonado.toStringAsFixed(1)}*
 Resta: *\$${resta.toStringAsFixed(1)}*
 Fecha límite: *$fechaLimite*
-Días restantes: *$diasRestantes*''';
+Días restantes: *$diasText*''';
   }
 
   /// Genera una ficha simplificada para créditos en cuotas
@@ -80,7 +82,9 @@ Días restantes: *$diasRestantes*''';
     required int cuotasVencidas,
     required double montoCuota,
   }) {
-    return '''*Ficha de Préstamo*
+    final String estadoExt = saldoPendiente.abs() < 0.01 ? ' ✅ *PAGADO*' : '';
+    
+    return '''*Ficha de Préstamo*$estadoExt
 
 Cliente: *$nombreCliente*
 Concepto: *$concepto*
@@ -112,6 +116,8 @@ Pendientes: *${totalCuotas - cuotasPagadas}*''';
     required String fechaLimite,
     required String diasRestantes,
   }) {
+    final String diasText = saldoPendiente.abs() < 0.01 ? '✅ *Pagado*' : diasRestantes;
+
     return '''*Ficha de Préstamo*
 
 Cliente: *$nombreCliente*
@@ -125,7 +131,7 @@ Cant. Abonos: *$cantidadAbonos*
 Monto Abonado: *\$${totalPagado.toStringAsFixed(2)}*
 Resta: *\$${saldoPendiente.toStringAsFixed(2)}*
 Fecha límite: *$fechaLimite*
-Días restantes: *$diasRestantes*''';
+Días restantes: *$diasText*''';
   }
 
   /// Abre WhatsApp con el mensaje dado

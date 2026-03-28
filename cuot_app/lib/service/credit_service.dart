@@ -86,7 +86,7 @@ class CreditService {
             'credito_id': creditId,
             'numero_cuota': numeroCuota,
             'monto': montoPagado,
-            'fecha_pago_real': fechaPago.toIso8601String(),
+            'fecha_pago_real': fechaPago.toUtc().toIso8601String(),
             'metodo_pago': metodoPago,
             'referencia': referencia,
             'observaciones': observaciones,
@@ -202,15 +202,6 @@ class CreditService {
           })
           .eq('credito_id', creditId)
           .eq('numero_cuota', 1);
-
-      // 3. Sincronizar estado del crédito
-      if (nuevoSaldo <= 0) {
-        await _supabase.client
-            .schema('Financiamientos')
-            .from('Creditos')
-            .update({'estado': 'Pagado'})
-            .eq('id', creditId);
-      }
 
       // 3. Sincronizar estado del crédito
       if (nuevoSaldo <= 0) {

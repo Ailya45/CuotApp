@@ -76,7 +76,8 @@ class _TarjetaCreditoUnicoState extends State<TarjetaCreditoUnico> {
       if (atraso > 0) return '$atraso días de atraso';
       return 'Vencido';
     }
-    if (_diasRestantes == 0) return 'Último día';
+    if (_diasRestantes <= 0) return 'Vencido';
+    if (_diasRestantes == 1) return 'Vence hoy';
     return '$_diasRestantes días restantes';
   }
 

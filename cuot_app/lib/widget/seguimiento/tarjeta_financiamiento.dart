@@ -638,10 +638,18 @@ class _TarjetaFinanciamientoState extends State<TarjetaFinanciamiento> {
         final proximaCuota = widget.cuotas.where((c) => !c.pagada).toList();
         if (proximaCuota.isNotEmpty) {
           proximaCuota.sort((a, b) => a.fechaPago.compareTo(b.fechaPago));
-          final hoy = DateTime.now();
-          final fechaNext = proximaCuota.first.fechaPago;
-          final diff = fechaNext.difference(hoy).inDays;
-          if (diff <= 0) return 'Hoy vence tu próxima cuota';
+          
+          final hoy = DateTime.utc(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+          final fechaNext = DateTime.utc(
+            proximaCuota.first.fechaPago.year, 
+            proximaCuota.first.fechaPago.month, 
+            proximaCuota.first.fechaPago.day
+          );
+          
+          if (fechaNext.isAtSameMomentAs(hoy)) return 'Hoy vence tu próxima cuota';
+          if (fechaNext.isBefore(hoy)) return 'Tienes cuotas vencidas';
+          
+          final diff = fechaNext.difference(hoy).inDays + 1; // +1 para ser inclusive
           return 'Próxima cuota en $diff días';
         }
         return 'Estás al día con tus pagos';

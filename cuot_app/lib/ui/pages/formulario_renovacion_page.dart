@@ -54,6 +54,7 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
 
   // Para Cuotas (Editables)
   List<Map<String, dynamic>> _cuotasEditables = [];
+  bool _moraEditadaManualmente = false; // 👈 NUEVO: Bandera para proteger edición manual
 
   // Datos calculados
   double _costoInversion = 0;
@@ -80,9 +81,10 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
     if (_tipoCredito == 'cuotas' && _cuotasEditables.isNotEmpty) {
       _repartirMontoEntreCuotas();
     }
-    // Sincronizar el controlador de mora con el nuevo cálculo sugerido si el usuario no lo ha cambiado manualmente a un valor muy específico
-    // O simplemente actualizarlo siempre que cambie el abono para reflejar la nueva base
-    _moraManualController.text = _moraSugerida.toStringAsFixed(2);
+    // Sincronizar el controlador de mora solo si no ha sido editado manualmente
+    if (!_moraEditadaManualmente) {
+      _moraManualController.text = _moraSugerida.toStringAsFixed(2);
+    }
     setState(() {});
   }
 
@@ -670,6 +672,7 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
                                   _fechaInicioRenovacion = pickedStart;
                                   _fechaLimiteNueva = pickedEnd;
                                   _fechaRenovacion = pickedEnd;
+                                  _moraEditadaManualmente = false; // 👈 Resetear para forzar el nuevo cálculo dinámico
                                   _updateMoraController();
                                 });
                               }
@@ -968,7 +971,18 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
                             fillColor: Colors.grey.shade100,
                             hintText: 'Ej: 5.00',
                           ),
-                          onChanged: (_) => setState(() {}),
+                          onChanged: (val) {
+                            setState(() {
+                              _moraEditadaManualmente = true; // 👈 Marcamos que el usuario editó el campo
+                            });
+                          },
+                          validator: (value) {
+                            if (value == null || value.isEmpty) return null;
+                            final n = double.tryParse(value);
+                            if (n == null) return 'Monto inválido';
+                            if (n < 0) return 'Solo valores positivos';
+                            return null;
+                          },
                         ),
                       ],
 

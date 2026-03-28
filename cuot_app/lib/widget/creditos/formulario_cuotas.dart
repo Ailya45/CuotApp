@@ -186,8 +186,9 @@ class _FormularioCuotasState extends State<FormularioCuotas> {
                         ),
                         keyboardType: TextInputType.number,
                         validator: (v) =>
-                            Validators.positiveNumber(v, 'Ganancia'),
+                            Validators.positiveNumber(v, 'Ganancia', allowZero: true),
                         onChanged: (value) {
+                          setState(() {});
                           _actualizarCredito();
                         },
                       ),
@@ -215,6 +216,7 @@ class _FormularioCuotasState extends State<FormularioCuotas> {
                         validator: (v) =>
                             Validators.positiveNumber(v, 'Cuotas'),
                         onChanged: (value) {
+                          setState(() {});
                           _actualizarCredito();
                           _ajustarPlanPorCambioMetadata();
                         },
@@ -582,7 +584,8 @@ class _FormularioCuotasState extends State<FormularioCuotas> {
       
       if (_modalidadSeleccionada != ModalidadPago.personalizado) {
         final totalPreservado = CuotaPersonalizada.calcularTotalCuotas(preservadas);
-        final montoRestante = _precioTotal - totalPreservado;
+        final balancePendienteReal = _precioTotal - widget.totalPagado;
+        final montoRestante = balancePendienteReal - totalPreservado;
         final numRestantes = _numCuotas - preservadas.length;
 
         if (numRestantes > 0) {
@@ -639,6 +642,32 @@ class _FormularioCuotasState extends State<FormularioCuotas> {
     }
 
     setState(() {
+      // 👇 Generar sugerencias basadas en la modalidad actual
+      List<DateTime> sugerencias;
+      switch (_modalidadSeleccionada) {
+        case ModalidadPago.diario:
+          sugerencias = DateUt.sugerirFechasDiarias(_fechaInicio, _numCuotas);
+          break;
+        case ModalidadPago.semanal:
+          sugerencias = DateUt.sugerirFechasSemanales(_fechaInicio, _numCuotas);
+          break;
+        case ModalidadPago.quincenal:
+          sugerencias = DateUt.sugerirFechasQuincenales(_fechaInicio, _numCuotas);
+          break;
+        case ModalidadPago.mensual:
+          sugerencias = DateUt.sugerirFechasMensuales(_fechaInicio, _numCuotas);
+          break;
+        default:
+          sugerencias = DateUt.sugerirFechasMensuales(_fechaInicio, _numCuotas);
+      }
+
+      _fechasPersonalizadas = List.generate(_numCuotas, (index) {
+        return CuotaPersonalizada(
+          numeroCuota: index + 1,
+          fechaPago: sugerencias[index],
+          monto: _valorCuota,
+        );
+      });
       _mostrarSelectorPersonalizado = true;
     });
   }

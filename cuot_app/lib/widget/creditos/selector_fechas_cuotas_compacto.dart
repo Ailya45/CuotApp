@@ -61,7 +61,7 @@ class _SelectorFechasCuotasCompactoState extends State<SelectorFechasCuotasCompa
         for (int i = 0; i < diff; i++) {
           _cuotas.add(CuotaPersonalizada(
             numeroCuota: _cuotas.length + 1,
-            fechaPago: ultimaFecha.add(Duration(days: 30 * (i + 1))),
+            fechaPago: ultimaFecha.add(Duration(days: 30 * (i))),
             monto: widget.montoPorCuota,
           ));
         }
@@ -76,7 +76,7 @@ class _SelectorFechasCuotasCompactoState extends State<SelectorFechasCuotasCompa
       _cuotas = List.generate(widget.numeroCuotas, (index) {
         return CuotaPersonalizada(
           numeroCuota: index + 1,
-          fechaPago: widget.fechaInicio.add(Duration(days: 30 * (index + 1))),
+          fechaPago: widget.fechaInicio.add(Duration(days: 30 * (index))),
           monto: widget.montoPorCuota,
         );
       });
@@ -109,7 +109,7 @@ class _SelectorFechasCuotasCompactoState extends State<SelectorFechasCuotasCompa
     setState(() {
       _cuotas[index] = CuotaPersonalizada(
         numeroCuota: index + 1,
-        fechaPago: widget.fechaInicio.add(Duration(days: 30 * (index + 1))),
+        fechaPago: widget.fechaInicio.add(Duration(days: 30 * (index))),
         monto: widget.montoPorCuota,
       );
       _cuotasModificadas[index] = false;
@@ -122,7 +122,7 @@ class _SelectorFechasCuotasCompactoState extends State<SelectorFechasCuotasCompa
       for (int i = 0; i < _cuotas.length; i++) {
         _cuotas[i] = CuotaPersonalizada(
           numeroCuota: i + 1,
-          fechaPago: widget.fechaInicio.add(Duration(days: 30 * (i + 1))),
+          fechaPago: widget.fechaInicio.add(Duration(days: 30 * (i))),
           monto: widget.montoPorCuota,
         );
       }

@@ -92,7 +92,10 @@ class _FormularioPagounicoState extends State<FormularioPagounico> {
                 icon: Icons.description,
               ),
               validator: (v) => Validators.required(v, 'Concepto'),
-              onChanged: _actualizarCredito,
+              onChanged: (value) {
+                setState(() {});
+                _actualizarCredito();
+              },
             ),
             const SizedBox(height: 20),
 
@@ -116,8 +119,12 @@ class _FormularioPagounicoState extends State<FormularioPagounico> {
                           prefix: '\$ ',
                         ),
                         keyboardType: TextInputType.number,
-                        validator: (v) => Validators.positiveNumber(v, 'Inversión'),
-                        onChanged: _actualizarCredito,
+                        validator: (v) =>
+                            Validators.positiveNumber(v, 'Inversión', allowZero: true),
+                        onChanged: (value) {
+                          setState(() {}); // 👈 Para actualizar resumen
+                          _actualizarCredito();
+                        },
                       ),
                     ],
                   ),
@@ -141,8 +148,11 @@ class _FormularioPagounicoState extends State<FormularioPagounico> {
                           prefix: '\$ ',
                         ),
                         keyboardType: TextInputType.number,
-                        validator: (v) => Validators.positiveNumber(v, 'Ganancia'),
-                        onChanged: _actualizarCredito,
+                        validator: (v) => Validators.positiveNumber(v, 'Ganancia', allowZero: true),
+                        onChanged: (value) {
+                          setState(() {});
+                          _actualizarCredito();
+                        },
                       ),
                     ],
                   ),
