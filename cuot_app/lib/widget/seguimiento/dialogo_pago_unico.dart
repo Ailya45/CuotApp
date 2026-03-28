@@ -653,6 +653,16 @@ class _DialogoPagoUnicoState extends State<DialogoPagoUnico>
     );
   }
 
+  DateTime _combinarFechaConHoraActual(DateTime date) {
+    final now = DateTime.now();
+    // Si la fecha elegida es HOY, usamos el 'now' completo para tener la hora exacta del momento.
+    if (date.year == now.year && date.month == now.month && date.day == now.day) {
+      return now;
+    }
+    // Si es otra fecha, la dejamos como está (probablemente 00:00:00 del picker)
+    return date;
+  }
+
   void _confirmarPago() {
     final monto = double.tryParse(_montoController.text) ?? 0;
     
@@ -666,7 +676,7 @@ class _DialogoPagoUnicoState extends State<DialogoPagoUnico>
       return;
     }
     
-    if (monto > _maxMonto) {
+    if (monto > _maxMonto + 0.01) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('El monto no puede exceder el saldo pendiente'),
@@ -682,7 +692,7 @@ class _DialogoPagoUnicoState extends State<DialogoPagoUnico>
       numeroCuota: 1,
       fechaPago: widget.credito.fechaLimite,
       monto: monto,
-      fechaPagoReal: _fechaPago,
+      fechaPagoReal: _combinarFechaConHoraActual(_fechaPago),
       estado: 'pagado',
       metodoPago: _metodoPago,
       referencia: _referenciaController.text,

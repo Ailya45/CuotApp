@@ -199,6 +199,16 @@ class _DialogoPagoCuotaCompletoState extends State<DialogoPagoCuotaCompleto>
     super.dispose();
   }
 
+  DateTime _combinarFechaConHoraActual(DateTime date) {
+    final now = DateTime.now();
+    // Si la fecha elegida es HOY, usamos el 'now' completo para tener la hora exacta del momento.
+    if (date.year == now.year && date.month == now.month && date.day == now.day) {
+      return now;
+    }
+    // Si es otra fecha, la dejamos como está (probablemente 00:00:00 del picker)
+    return date;
+  }
+
   @override
   Widget build(BuildContext context) {
     return FadeTransition(
@@ -631,7 +641,7 @@ class _DialogoPagoCuotaCompletoState extends State<DialogoPagoCuotaCompleto>
                             if (_tipoPago == 'completo' && (monto - widget.montoRestante).abs() > 0.01) {
                               return 'El monto debe ser \$${widget.montoRestante.toStringAsFixed(2)}';
                             }
-                            if (_tipoPago == 'parcial' && monto > widget.montoRestante) {
+                            if (_tipoPago == 'parcial' && monto > widget.montoRestante + 0.01) {
                               return 'No puede exceder el restante de \$${widget.montoRestante.toStringAsFixed(2)}';
                             }
                             return null;
@@ -996,11 +1006,11 @@ class _DialogoPagoCuotaCompletoState extends State<DialogoPagoCuotaCompleto>
                                   if (_formKey.currentState!.validate()) {
                                     final monto = double.parse(_montoController.text);
                                     final esPagoParcial = _tipoPago == 'parcial' && 
-                                        (monto < widget.montoRestante);
+                                        (monto < widget.montoRestante - 0.01);
                                     
                                     widget.onPagar(
                                       monto,
-                                      _fechaPago,
+                                      _combinarFechaConHoraActual(_fechaPago),
                                       _metodoPago,
                                       _referenciaController.text,
                                       _observacionesController.text,

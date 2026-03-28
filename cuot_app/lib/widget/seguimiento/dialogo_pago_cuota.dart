@@ -60,6 +60,16 @@ class _DialogoPagoCuotaState extends State<DialogoPagoCuota> with SingleTickerPr
     super.dispose();
   }
 
+  DateTime _combinarFechaConHoraActual(DateTime date) {
+    final now = DateTime.now();
+    // Si la fecha elegida es HOY, usamos el 'now' completo para tener la hora exacta del momento.
+    if (date.year == now.year && date.month == now.month && date.day == now.day) {
+      return now;
+    }
+    // Si es otra fecha, la dejamos como está (probablemente 00:00:00 del picker)
+    return date;
+  }
+
   @override
   Widget build(BuildContext context) {
     return ScaleTransition(
@@ -220,7 +230,7 @@ class _DialogoPagoCuotaState extends State<DialogoPagoCuota> with SingleTickerPr
                     if (monto == null || monto <= 0) {
                       return 'Monto inválido';
                     }
-                    if (monto > widget.monto) {
+                    if (monto > widget.monto + 0.01) {
                       return 'No puede exceder la cuota';
                     }
                     return null;
@@ -403,7 +413,7 @@ class _DialogoPagoCuotaState extends State<DialogoPagoCuota> with SingleTickerPr
                         onPressed: () {
                           if (_formKey.currentState!.validate()) {
                             final monto = double.parse(_montoController.text);
-                            widget.onPagar(monto, _fechaPago, _metodoPago);
+                            widget.onPagar(monto, _combinarFechaConHoraActual(_fechaPago), _metodoPago);
                             Navigator.pop(context);
                           }
                         },
