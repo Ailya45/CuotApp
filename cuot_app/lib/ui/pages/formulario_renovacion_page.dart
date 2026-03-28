@@ -920,7 +920,7 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const Text(
-                                    '¿Desea incluir mora en esta renovación?',
+                                    '¿Desea incluir una ganancia extra en esta renovación?',
                                     style: TextStyle(
                                       fontWeight: FontWeight.w600,
                                       fontSize: 14,
@@ -939,7 +939,7 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('Monto de Mora a Incluir (\$)',
+                            const Text('Ganancia Extra a Incluir (\$)',
                                 style: TextStyle(
                                     fontWeight: FontWeight.w600, fontSize: 14)),
                             Text(
@@ -1099,7 +1099,7 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
                       if (_incluirMora && _montoMora > 0)
                         TableRow(
                           children: [
-                            _buildTableCell('Mora'),
+                            _buildTableCell('Ganancia extra'),
                             _buildTableCell('\$0.00'),
                             _buildTableCell(
                                 '\$${_montoMora.toStringAsFixed(2)}',
@@ -1166,7 +1166,7 @@ class _FormularioRenovacionPageState extends State<FormularioRenovacionPage> {
                         _buildCalcRow('- Abono aplicado', -_abono,
                             color: AppColors.success),
                       if (_incluirMora && _montoMora > 0)
-                        _buildCalcRow('+ Mora incluida', _montoMora,
+                        _buildCalcRow('+ Ganancia extra', _montoMora,
                             color: AppColors.error),
                       const Divider(),
                       _buildCalcRow('NUEVO TOTAL CRÉDITO', _nuevoMontoTotal,
