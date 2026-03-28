@@ -875,7 +875,7 @@ class _FormularioCuotasState extends State<FormularioCuotas> {
     if (_precioTotal < widget.totalPagado) {
       _mostrarError(
         'Monto inválido',
-        'El precio total ($${_precioTotal.toStringAsFixed(2)}) no puede ser menor al monto ya pagado ($${widget.totalPagado.toStringAsFixed(2)}).',
+        'El precio total (${_precioTotal.toStringAsFixed(2)}) no puede ser menor al monto ya pagado (${widget.totalPagado.toStringAsFixed(2)}).',
       );
       return;
     }
