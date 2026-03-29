@@ -62,7 +62,7 @@ class CuotaMiniatura extends StatelessWidget {
             ),
             const SizedBox(height: 2),
             Text(
-              '\$${monto.toStringAsFixed(0)}',
+              '\$${monto.toStringAsFixed(2)}',
               style: TextStyle(
                 fontSize: 9,
                 fontWeight: FontWeight.w600,

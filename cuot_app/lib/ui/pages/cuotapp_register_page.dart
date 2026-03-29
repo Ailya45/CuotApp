@@ -4,6 +4,7 @@ import 'package:cuot_app/widget/register/step_basic_info.dart';
 import 'package:cuot_app/widget/register/step_documents.dart';
 import 'package:flutter/material.dart';
 import 'dart:io';
+import 'package:cuot_app/utils/network_utils.dart';
 
 class CuotAppRegisterPage extends StatefulWidget {
   const CuotAppRegisterPage({super.key});
@@ -76,6 +77,16 @@ class _CuotAppRegisterPageState extends State<CuotAppRegisterPage> {
 
   Future<void> _registrarUsuario() async {
     setState(() => _isRegistering = true);
+
+    // Verificar conexión a internet
+    if (!await NetworkUtils.hasInternetConnection()) {
+      if (mounted) {
+        setState(() => _isRegistering = false);
+        _showSnackBar('Sin conexión a internet. Por favor verifica tu red.', Colors.red);
+      }
+      return;
+    }
+
     final supabaseService = SupabaseService();
     String? cedulaPath;
 
@@ -111,7 +122,8 @@ class _CuotAppRegisterPageState extends State<CuotAppRegisterPage> {
         await supabaseService.deleteFile(cedulaPath);
       }
       if (mounted) {
-        _showSnackBar('Error al registrar: $e', Colors.red);
+        final friendlyError = NetworkUtils.getFriendlyErrorMessage(e);
+        _showSnackBar('Error al registrar: $friendlyError', Colors.red);
       }
     } finally {
       if (mounted) setState(() => _isRegistering = false);

@@ -112,7 +112,7 @@ class _SelectorFechasCuotasCompactoState
     setState(() {
       _cuotas[index] = CuotaPersonalizada(
         numeroCuota: index + 1,
-        fechaPago: widget.fechaInicio.add(Duration(days: 30 * (index + 1))),
+        fechaPago: widget.fechaInicio.add(Duration(days: 30 * (index))),
         monto: widget.montoPorCuota,
       );
       _cuotasModificadas[index] = false;
@@ -206,8 +206,11 @@ class _SelectorFechasCuotasCompactoState
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Total: \$${_totalCuotas.toStringAsFixed(2)} / '
-                      '\$${widget.precioTotalEsperado.toStringAsFixed(2)}',
+                      widget.saldoPendienteEsperado != null
+                        ? 'Pendiente config: \$${_totalCuotasValidadas.toStringAsFixed(2)} / '
+                          '\$${widget.saldoPendienteEsperado!.toStringAsFixed(2)}'
+                        : 'Total: \$${_totalCuotasValidadas.toStringAsFixed(2)} / '
+                          '\$${widget.precioTotalEsperado.toStringAsFixed(2)}',
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
@@ -228,7 +231,7 @@ class _SelectorFechasCuotasCompactoState
                     border: Border.all(color: Colors.red.shade200),
                   ),
                   child: Text(
-                    '${_diferencia > 0 ? "+" : ""}\$${_diferencia.toStringAsFixed(2)}',
+                    '${_diferencia > 0 ? "Sobran" : "Faltan"}: \$${_diferencia.abs().toStringAsFixed(2)}',
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.bold,

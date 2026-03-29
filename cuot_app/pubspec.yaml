@@ -30,9 +30,12 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
   supabase_flutter: ^2.12.0
   flutter_dotenv: ^6.0.0
-  intl: ^0.18.1
+  intl: ^0.20.2
   provider: ^6.1.1
   image_picker: ^1.0.4
   tabler_icons_flutter: ^2.11.0
@@ -45,10 +48,25 @@ dependencies:
   flutter_secure_storage: ^9.0.0
   http: ^1.1.0
   html: ^0.15.4
+  url_launcher: ^6.2.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_launcher_icons: "^0.14.4" 
+  rename_app: any
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/icon/app_icon.jpeg"
+  min_sdk_android: 21 
+
+rename_app:
+  android: 
+    app_name: "CuotApp"
+  ios: 
+    app_name: "CuotApp"
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is

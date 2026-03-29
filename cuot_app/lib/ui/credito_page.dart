@@ -9,21 +9,56 @@ import 'package:cuot_app/ui/pages/seguimiento_creditos_page.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-class CreditoPage extends StatelessWidget {
+class CreditoPage extends StatefulWidget {
   final String nombreUsuario;
+  final String? creditoIdEditar;
 
-  const CreditoPage({super.key, required this.nombreUsuario});
+  const CreditoPage({
+    super.key,
+    required this.nombreUsuario,
+    this.creditoIdEditar,
+  });
+
+  @override
+  State<CreditoPage> createState() => _CreditoPageState();
+}
+
+class _CreditoPageState extends State<CreditoPage> {
+  final CreditoController _controller = CreditoController();
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.creditoIdEditar != null) {
+      _cargarDatosEdicion();
+    }
+  }
+
+  Future<void> _cargarDatosEdicion() async {
+    setState(() => _isLoading = true);
+    await _controller.cargarCreditoParaEdicion(widget.creditoIdEditar!);
+    setState(() => _isLoading = false);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => CreditoController(),
+    return ChangeNotifierProvider.value(
+      value: _controller,
       child: Scaffold(
         appBar: AppBar(
-          title: Text('Gestión de Financiamientos'),
+          title: Text(widget.creditoIdEditar != null ? 'Editar Financiamiento' : 'Gestión de Cuotas'),
           centerTitle: true,
         ),
-        body: Consumer<CreditoController>(
+        body: _isLoading 
+            ? const Center(child: CircularProgressIndicator())
+            : Consumer<CreditoController>(
           builder: (context, controller, child) {
             // Si no hay tipo seleccionado, mostrar selector
             if (controller.tipoCreditoSeleccionado == null) {
@@ -35,10 +70,14 @@ class CreditoPage extends StatelessWidget {
             // Mostrar formulario según tipo
             return controller.tipoCreditoSeleccionado == TipoCredito.cuotas
                 ? FormularioCuotas(
+                    creditoInicial: controller.creditoEnProceso,
+                    totalPagado: controller.totalPagado,
                     onCreditoActualizado: controller.actualizarCreditoParcial,
                     onGuardar: () => _guardarCredito(context, controller),
                   )
                 : FormularioPagounico(
+                    creditoInicial: controller.creditoEnProceso,
+                    totalPagado: controller.totalPagado,
                     onCreditoActualizado: controller.actualizarCreditoParcial,
                     onGuardar: () => _guardarCredito(context, controller),
                   );
@@ -57,13 +96,39 @@ class CreditoPage extends StatelessWidget {
       if (controller.creditoEnProceso != null) {
         final credito = controller.creditoEnProceso!;
         File? facturaFile;
-        if (credito.facturaPath != null) {
+        if (credito.facturaPath != null && !credito.facturaPath!.startsWith('http')) {
           facturaFile = File(credito.facturaPath!);
+        }
+
+        bool existe = await controller.clienteExisteYEsDiferenteAlActual(credito.nombreCliente, widget.nombreUsuario);
+        if (existe) {
+          bool? continuar = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Cliente ya registrado'),
+              content: Text('Ya tienes un registro con el nombre "${credito.nombreCliente}".\n\n¿Deseas continuar y asignarle este crédito a ese cliente?'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('MODIFICAR NOMBRE'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).primaryColor,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('SÍ, ASIGNAR'),
+                ),
+              ],
+            ),
+          );
+          if (continuar != true) return;
         }
 
         await controller.guardarCredito(
           credito, 
-          nombreUsuario, 
+          widget.nombreUsuario, 
           facturaArchivo: facturaFile,
         );
         
@@ -77,12 +142,16 @@ class CreditoPage extends StatelessWidget {
         // Navegar a SeguimientoCreditosPage
       
         if (context.mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => SeguimientoCreditosPage(nombreUsuario: nombreUsuario),
-            ),
-          );
+          if (Navigator.canPop(context)) {
+            Navigator.pop(context, true);
+          } else {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => SeguimientoCreditosPage(nombreUsuario: widget.nombreUsuario),
+              ),
+            );
+          }
         }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(

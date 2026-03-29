@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cuot_app/utils/scrapper_util.dart'; // 👈 NUEVO: Scrapper
 import 'package:cuot_app/theme/app_colors.dart';
 import 'package:intl/intl.dart';
+import 'package:cuot_app/widget/creditos/custom_date_picker.dart';
 
 class DialogoPagoCuotaCompleto extends StatefulWidget {
   final int numeroCuota;
@@ -143,23 +144,7 @@ class _DialogoPagoCuotaCompletoState extends State<DialogoPagoCuotaCompleto>
     }
   }
 
-  // Formatear fecha larga
-  String _formatearFechaLarga(DateTime fecha) {
-    final dias = [
-      'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'
-    ];
-    final meses = [
-      'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-      'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
-    ];
-    
-    final diaSemana = dias[fecha.weekday - 1];
-    final dia = fecha.day;
-    final mes = meses[fecha.month - 1];
-    final ano = fecha.year;
-    
-    return '$diaSemana, $dia de $mes de $ano';
-  }
+
 
   @override
   void initState() {
@@ -214,6 +199,16 @@ class _DialogoPagoCuotaCompletoState extends State<DialogoPagoCuotaCompleto>
     super.dispose();
   }
 
+  DateTime _combinarFechaConHoraActual(DateTime date) {
+    final now = DateTime.now();
+    // Si la fecha elegida es HOY, usamos el 'now' completo para tener la hora exacta del momento.
+    if (date.year == now.year && date.month == now.month && date.day == now.day) {
+      return now;
+    }
+    // Si es otra fecha, la dejamos como está (probablemente 00:00:00 del picker)
+    return date;
+  }
+
   @override
   Widget build(BuildContext context) {
     return FadeTransition(
@@ -249,10 +244,11 @@ class _DialogoPagoCuotaCompletoState extends State<DialogoPagoCuotaCompleto>
                 ),
               ],
             ),
-            child: Column(
+            child: Stack(
               children: [
-                // Header ya no tiene barra superior (ELIMINADO)
-              Expanded(
+                Column(
+                  children: [
+                    Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(24),
                   child: Form(
@@ -538,61 +534,14 @@ class _DialogoPagoCuotaCompletoState extends State<DialogoPagoCuotaCompleto>
                         const SizedBox(height: 16),
                         
                         // 3. Fecha de pago
-                        InkWell(
-                          onTap: () async {
-                            final date = await showDatePicker(
-                              context: context,
-                              initialDate: _fechaPago,
-                              firstDate: DateTime.now().subtract(const Duration(days: 30)),
-                              lastDate: DateTime.now().add(const Duration(days: 30)),
-                              builder: (context, child) {
-                                return Theme(
-                                  data: ThemeData.light().copyWith(
-                                    primaryColor: AppColors.success,
-                                    colorScheme: const ColorScheme.light(
-                                      primary: AppColors.success,
-                                    ),
-                                  ),
-                                  child: child!,
-                                );
-                              },
-                            );
-                            if (date != null) {
-                              setState(() {
-                                _fechaPago = date;
-                              });
-                            }
+                        CustomDatePicker(
+                          selectedDate: _fechaPago,
+                          onDateSelected: (date) {
+                            setState(() {
+                              _fechaPago = date;
+                            });
                           },
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade50,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: Colors.grey.shade300),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(Icons.calendar_today, color: AppColors.success),
-                                const SizedBox(width: 12),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Fecha de pago',
-                                      style: TextStyle(fontSize: 12, color: AppColors.mediumGrey),
-                                    ),
-                                    Text(
-                                      _formatearFechaLarga(_fechaPago),
-                                      style: const TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
+                          label: 'Fecha de pago',
                         ),
                         
                         const SizedBox(height: 16),
@@ -692,7 +641,7 @@ class _DialogoPagoCuotaCompletoState extends State<DialogoPagoCuotaCompleto>
                             if (_tipoPago == 'completo' && (monto - widget.montoRestante).abs() > 0.01) {
                               return 'El monto debe ser \$${widget.montoRestante.toStringAsFixed(2)}';
                             }
-                            if (_tipoPago == 'parcial' && monto > widget.montoRestante) {
+                            if (_tipoPago == 'parcial' && monto > widget.montoRestante + 0.01) {
                               return 'No puede exceder el restante de \$${widget.montoRestante.toStringAsFixed(2)}';
                             }
                             return null;
@@ -1057,11 +1006,11 @@ class _DialogoPagoCuotaCompletoState extends State<DialogoPagoCuotaCompleto>
                                   if (_formKey.currentState!.validate()) {
                                     final monto = double.parse(_montoController.text);
                                     final esPagoParcial = _tipoPago == 'parcial' && 
-                                        (monto < widget.montoRestante);
+                                        (monto < widget.montoRestante - 0.01);
                                     
                                     widget.onPagar(
                                       monto,
-                                      _fechaPago,
+                                      _combinarFechaConHoraActual(_fechaPago),
                                       _metodoPago,
                                       _referenciaController.text,
                                       _observacionesController.text,
@@ -1100,15 +1049,25 @@ class _DialogoPagoCuotaCompletoState extends State<DialogoPagoCuotaCompleto>
                           ],
                         ),
                       ],
-                    ),
-                  ),
-                ),
-              ),
+                    ), // Fin Inner Column
+                  ), // Fin Form
+                ), // Fin SingleChildScrollView
+              ), // Fin Expanded
             ],
-          ),
-        ),
-      ),
+            ), // Fin Main Column,
+            Positioned(
+              top: 10,
+              left: 10,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: AppColors.mediumGrey),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+          ],
+        ), // Fin Stack
+      ), // Fin Container
     ),
+  )
   );
 }
 

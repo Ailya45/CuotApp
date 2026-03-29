@@ -25,7 +25,7 @@ class DateUt {
   ) {
     return List.generate(
       cantidad,
-      (index) => fechaInicio.add(Duration(days: index + 1)),
+      (index) => fechaInicio.add(Duration(days: index)),
     );
   }
 
@@ -36,7 +36,7 @@ class DateUt {
   ) {
     return List.generate(
       cantidad,
-      (index) => fechaInicio.add(Duration(days: (index + 1) * 7)),
+      (index) => fechaInicio.add(Duration(days: index * 7)),
     );
   }
 
@@ -47,7 +47,7 @@ class DateUt {
   ) {
     return List.generate(
       cantidad,
-      (index) => fechaInicio.add(Duration(days: (index + 1) * 15)),
+      (index) => fechaInicio.add(Duration(days: index * 15)),
     );
   }
 
@@ -60,7 +60,7 @@ class DateUt {
       cantidad,
       (index) => DateTime(
         fechaInicio.year,
-        fechaInicio.month + index + 1,
+        fechaInicio.month + index,
         fechaInicio.day,
       ),
     );
@@ -74,27 +74,54 @@ class DateUt {
   }
 
   /// Formatea la duración legiblemente (Ej: "15 días", "1 mes" o "2 meses y 5 días")
+  /// AHORA: Conteo inclusive (incluye el día inicial y final)
   static String formatearDuracion(DateTime inicio, DateTime fin) {
-    if (fin.isBefore(inicio)) return '0 días';
+    // Normalizar a UTC para evitar problemas con DST/Horarios de verano
+    final start = DateTime.utc(inicio.year, inicio.month, inicio.day);
+    final end = DateTime.utc(fin.year, fin.month, fin.day);
     
-    final diferenciaTotalDias = fin.difference(inicio).inDays;
+    if (end.isBefore(start)) return '0 días';
+    
+    // Diferencia total de días inclusive
+    final diferenciaTotalDias = end.difference(start).inDays + 1;
+    
+    // Si es menos de 30 días, mostrar solo días
     if (diferenciaTotalDias < 30) {
-      return '$diferenciaTotalDias días';
+      return '$diferenciaTotalDias ${diferenciaTotalDias == 1 ? 'día' : 'días'}';
     }
 
+    // Cálculo de meses completos
     int meses = (fin.year - inicio.year) * 12 + (fin.month - inicio.month);
     
-    // Ajustar los meses si el día del mes de fin es menor al de inicio
+    // Fecha tentativa después de 'meses' completos
     DateTime fechaMesesCompletos = DateTime(inicio.year, inicio.month + meses, inicio.day);
+    
+    // Si la fecha tentativa se pasa de la fecha fin, retroceder un mes
     if (fechaMesesCompletos.isAfter(fin)) {
       meses--;
       fechaMesesCompletos = DateTime(inicio.year, inicio.month + meses, inicio.day);
     }
     
-    final diasRestantes = fin.difference(fechaMesesCompletos).inDays;
+    // Calcular días restantes después de meses completos
+    final startNormalized = DateTime.utc(fechaMesesCompletos.year, fechaMesesCompletos.month, fechaMesesCompletos.day);
+    final endNormalized = DateTime.utc(fin.year, fin.month, fin.day);
+    
+    // En el conteo de meses "1 mes y 0 días" es un mes exacto.
+    // El "+1" de lo inclusivo ya está absorbido en la lógica de meses si coincide el día,
+    // pero si no, queremos los días restantes inclusive también.
+    // Si inicio 27 y fin 31, meses = 0, totalInclusive = 5.
+    
+    if (meses == 0) {
+      return '$diferenciaTotalDias ${diferenciaTotalDias == 1 ? 'día' : 'días'}';
+    }
+
+    // Días restantes inclusive desde la fecha de meses completos
+    // Si inicio 20 y fin 20 del mes siguiente, meses = 1, diasRestantes = 0.
+    final diasRestantes = endNormalized.difference(startNormalized).inDays;
     
     String resultado = '$meses ${meses == 1 ? 'mes' : 'meses'}';
     if (diasRestantes > 0) {
+      // Si sumamos días a una cuenta de meses, esos días ya son el "resto"
       resultado += ' y $diasRestantes ${diasRestantes == 1 ? 'día' : 'días'}';
     }
     

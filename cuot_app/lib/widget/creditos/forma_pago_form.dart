@@ -1,5 +1,7 @@
 import 'package:cuot_app/utils/formatters.dart';
 import 'package:flutter/material.dart';
+import 'package:cuot_app/widget/creditos/custom_date_picker.dart';
+import 'package:intl/intl.dart';
 
 class FormaPagoForm extends StatefulWidget {
   final Function(Map<String, dynamic>) onFormaPagoChanged;
@@ -21,6 +23,7 @@ class _FormaPagoFormState extends State<FormaPagoForm> {
   double _interes = 0;
   double _cuotaInicial = 0;
   final _cuotaInicialController = TextEditingController();
+  DateTime _fechaPrimerPago = DateTime.now().add(const Duration(days: 7));
 
   final List<String> _opcionesPago = ['semanal', 'quincenal', 'mensual'];
 
@@ -37,17 +40,7 @@ class _FormaPagoFormState extends State<FormaPagoForm> {
 
   // 🔧 LÓGICA: Calcular fecha estimada de primera cuota
   String get _fechaEstimada {
-    final fecha = DateTime.now();
-    switch (_formaPago) {
-      case 'semanal':
-        return fecha.add(Duration(days: 7)).toString().split(' ')[0];
-      case 'quincenal':
-        return fecha.add(Duration(days: 15)).toString().split(' ')[0];
-      case 'mensual':
-        return fecha.add(Duration(days: 30)).toString().split(' ')[0];
-      default:
-        return '';
-    }
+    return DateFormat('dd/MM/yyyy').format(_fechaPrimerPago);
   }
 
   // 🔧 LÓGICA: Notificar cambios
@@ -126,11 +119,44 @@ class _FormaPagoFormState extends State<FormaPagoForm> {
                     onChanged: (value) {
                       setState(() {
                         _formaPago = value!;
+                        // Ajustar fecha sugerida según cambio de frecuencia
+                        final now = DateTime.now();
+                        if (_formaPago == 'semanal') {
+                          _fechaPrimerPago = now.add(const Duration(days: 7));
+                        } else if (_formaPago == 'quincenal') {
+                          _fechaPrimerPago = now.add(const Duration(days: 15));
+                        } else if (_formaPago == 'mensual') {
+                          _fechaPrimerPago = now.add(const Duration(days: 30));
+                        }
                         _notificarCambio();
                       });
                     },
                   );
                 }),
+              ],
+            ),
+          ),
+        ),
+
+        // Fecha de primer pago
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Fecha del primer pago', style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 12),
+                CustomDatePicker(
+                  selectedDate: _fechaPrimerPago,
+                  onDateSelected: (date) {
+                    setState(() {
+                      _fechaPrimerPago = date;
+                      _notificarCambio();
+                    });
+                  },
+                  label: 'Seleccionar fecha',
+                ),
               ],
             ),
           ),

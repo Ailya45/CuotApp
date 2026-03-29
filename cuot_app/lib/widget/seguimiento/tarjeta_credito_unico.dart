@@ -4,18 +4,24 @@ import 'package:cuot_app/Model/credito_unico_model.dart';
 import 'package:cuot_app/Model/pago_model.dart';
 import 'package:cuot_app/theme/app_colors.dart';
 import 'package:cuot_app/widget/seguimiento/dialogo_pago_unico.dart';
+import 'package:cuot_app/service/whatsapp_service.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart'; // 👈 NUEVO
+import 'package:intl/intl.dart';
 
 class TarjetaCreditoUnico extends StatefulWidget {
   final CreditoUnico credito;
   final Function(Pago) onPagoRealizado;
   final VoidCallback onVerDetalle;
+  final VoidCallback? onEditar;
+  final VoidCallback? onEliminar;
 
   const TarjetaCreditoUnico({
     super.key,
     required this.credito,
     required this.onPagoRealizado,
     required this.onVerDetalle,
+    this.onEditar,
+    this.onEliminar,
   });
 
   @override
@@ -25,17 +31,53 @@ class TarjetaCreditoUnico extends StatefulWidget {
 class _TarjetaCreditoUnicoState extends State<TarjetaCreditoUnico> {
   bool _expandido = false;
 
+  void _enviarWhatsApp() {
+    final credito = widget.credito;
+    final diasRestantes = credito.estaVencido
+        ? '${_diasAtrasoTotal} días de atraso'
+        : '$_diasRestantes días';
+    final mensaje = WhatsappService.generarFichaUnico(
+      creditoId: credito.id.toString(),
+      nombreCliente: credito.nombreCliente.trim(),
+      concepto: credito.concepto.trim(),
+      montoTotal: credito.montoTotal,
+      totalPagado: credito.totalPagado,
+      saldoPendiente: credito.saldoPendiente,
+      cantidadAbonos: credito.pagosRealizados.length,
+      fechaLimite: DateFormat('dd/MM/yy').format(credito.fechaLimite),
+      diasRestantes: diasRestantes,
+    );
+    WhatsappService.abrirWhatsApp(
+      telefono: credito.telefono,
+      mensaje: mensaje,
+    );
+  }
+
   int get _diasRestantes {
-    final hoy = DateTime.now();
-    final fechaLimite = widget.credito.fechaLimite;
-    final diferencia = fechaLimite.difference(hoy).inDays;
+    final hoy = DateTime.utc(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+    final fechaLimite = DateTime.utc(widget.credito.fechaLimite.year, widget.credito.fechaLimite.month, widget.credito.fechaLimite.day);
+    if (fechaLimite.isBefore(hoy)) return 0;
+    final diferencia = fechaLimite.difference(hoy).inDays + 1; // +1 para ser inclusive
+    return diferencia > 0 ? diferencia : 0;
+  }
+
+  int get _diasAtrasoTotal {
+    final hoy = DateTime.utc(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+    final fechaLimite = DateTime.utc(widget.credito.fechaLimite.year, widget.credito.fechaLimite.month, widget.credito.fechaLimite.day);
+    if (hoy.isBefore(fechaLimite)) return 0;
+    final diferencia = hoy.difference(fechaLimite).inDays; // El atraso se mantiene estándar (diferencia absoluta)
     return diferencia > 0 ? diferencia : 0;
   }
 
   String get _textoDiasRestantes {
     if (widget.credito.estaPagado) return 'Pagado';
-    if (widget.credito.estaVencido) return 'Vencido';
-    if (_diasRestantes == 0) return 'Último día';
+    if (widget.credito.estaVencido) {
+      final atraso = _diasAtrasoTotal;
+      if (atraso > 0) return '$atraso días de atraso';
+      return 'Vencido';
+    }
+    if (_diasRestantes <= 0) return 'Vencido';
+    if (_diasRestantes == 1) return 'Vence hoy';
     return '$_diasRestantes días restantes';
   }
 
@@ -59,7 +101,8 @@ class _TarjetaCreditoUnicoState extends State<TarjetaCreditoUnico> {
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
-          gradient: LinearGradient(
+          color: widget.credito.estaPagado ? Colors.white : null,
+          gradient: widget.credito.estaPagado ? null : LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
@@ -122,6 +165,8 @@ class _TarjetaCreditoUnicoState extends State<TarjetaCreditoUnico> {
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold,
                                       ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                 ],
@@ -129,85 +174,75 @@ class _TarjetaCreditoUnicoState extends State<TarjetaCreditoUnico> {
                               const SizedBox(height: 4),
                               Padding(
                                 padding: const EdgeInsets.only(left: 28),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.phone,
-                                      size: 12,
-                                      color: Colors.grey.shade600,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      widget.credito.telefono.isEmpty 
-                                          ? 'No tiene' 
-                                          : widget.credito.telefono,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey.shade600,
-                                        fontStyle: widget.credito.telefono.isEmpty 
-                                            ? FontStyle.italic 
-                                            : FontStyle.normal,
-                                      ),
-                                    ),
-                                    if (widget.credito.telefono.isNotEmpty) ...[
-                                      const SizedBox(width: 8),
-                                      const FaIcon(
-                                        FontAwesomeIcons.whatsapp,
+                                child: GestureDetector(
+                                  behavior: HitTestBehavior.opaque,
+                                  onTap: widget.credito.telefono.isNotEmpty ? _enviarWhatsApp : null,
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.phone,
                                         size: 12,
-                                        color: Colors.green,
+                                        color: Colors.grey.shade600,
                                       ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        widget.credito.telefono.isEmpty 
+                                            ? 'No tiene' 
+                                            : widget.credito.telefono,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey.shade600,
+                                          fontStyle: widget.credito.telefono.isEmpty 
+                                              ? FontStyle.italic 
+                                              : FontStyle.normal,
+                                        ),
+                                      ),
+                                      if (widget.credito.telefono.isNotEmpty) ...[
+                                        const SizedBox(width: 8),
+                                        const FaIcon(
+                                          FontAwesomeIcons.whatsapp,
+                                          size: 12,
+                                          color: Colors.green,
+                                        ),
+                                      ],
                                     ],
-                                  ],
+                                  ),
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: widget.credito.estadoColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: widget.credito.estadoColor.withOpacity(0.3),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: _colorDiasRestantes.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.event,
+                                    size: 14,
+                                    color: _colorDiasRestantes,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    _textoDiasRestantes,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: _colorDiasRestantes,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                widget.credito.estadoIcon,
-                                size: 14,
-                                color: widget.credito.estadoColor,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                widget.credito.estado,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: widget.credito.estadoColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        IconButton(
-                          icon: Icon(
-                            _expandido 
-                                ? Icons.keyboard_arrow_up 
-                                : Icons.keyboard_arrow_down,
-                            color: AppColors.primaryGreen,
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _expandido = !_expandido;
-                            });
-                          },
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
+                          ],
                         ),
                       ],
                     ),
@@ -239,96 +274,11 @@ class _TarjetaCreditoUnicoState extends State<TarjetaCreditoUnico> {
                             ],
                           ),
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: _colorDiasRestantes.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.event,
-                                size: 14,
-                                color: _colorDiasRestantes,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                _textoDiasRestantes,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: _colorDiasRestantes,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                        const SizedBox.shrink(),
                       ],
                     ),
                     
                     const SizedBox(height: 16),
-                    
-                    // Barra de progreso
-                    Column(
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.trending_up,
-                                  size: 14,
-                                  color: Colors.grey.shade600,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'Progreso de pago',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey.shade600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: widget.credito.estadoColor.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                '${(widget.credito.progreso * 100).toStringAsFixed(1)}%',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  color: widget.credito.estadoColor,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        LinearProgressIndicator(
-                          value: widget.credito.progreso.clamp(0.0, 1.0),
-                          backgroundColor: Colors.grey.shade200,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            widget.credito.estadoColor,
-                          ),
-                          minHeight: 8,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      ],
-                    ),
-                    
-                    const SizedBox(height: 12),
                     
                     // Grid de montos
                     Row(
@@ -349,8 +299,89 @@ class _TarjetaCreditoUnicoState extends State<TarjetaCreditoUnico> {
                           'Pendiente',
                           '\$${widget.credito.saldoPendiente.toStringAsFixed(2)}',
                           widget.credito.saldoPendiente > 0 
-                              ? AppColors.warning 
+                              ? Colors.orange.shade700 
                               : AppColors.success,
+                        ),
+                      ],
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Barra de progreso y Ojo
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.trending_up,
+                                        size: 14,
+                                        color: Colors.grey.shade600,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'Progreso de pago',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: widget.credito.estadoColor.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      '${(widget.credito.progreso * 100).toStringAsFixed(1)}%',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: widget.credito.estadoColor,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              LinearProgressIndicator(
+                                value: widget.credito.progreso.clamp(0.0, 1.0),
+                                backgroundColor: Colors.grey.shade200,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  widget.credito.estadoColor,
+                                ),
+                                minHeight: 8,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.info.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: IconButton(
+                            icon: const Icon(
+                              Icons.visibility_outlined,
+                              color: AppColors.info,
+                              size: 24,
+                            ),
+                            onPressed: widget.onVerDetalle,
+                            tooltip: 'Ver Detalle',
+                          ),
                         ),
                       ],
                     ),
@@ -360,160 +391,97 @@ class _TarjetaCreditoUnicoState extends State<TarjetaCreditoUnico> {
             ),
             
             // Sección expandible con botones de acción
-            if (_expandido) ...[
-              const Divider(height: 1),
-              Container(
-                padding: const EdgeInsets.all(16),
-                color: Colors.grey.shade50,
-                child: Column(
+            // Sección expandible con botones de acción
+            AnimatedSize(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              child: _expandido
+                ? Column(
                   children: [
-                    // Historial de pagos
-                    if (widget.credito.pagosRealizados.isNotEmpty) ...[
-                      Row(
+                    const Divider(height: 1),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: const BorderRadius.only(
+                          bottomLeft: Radius.circular(20),
+                          bottomRight: Radius.circular(20),
+                        ),
+                      ),
+                      child: Column(
                         children: [
-                          Icon(
-                            Icons.history,
-                            size: 16,
-                            color: AppColors.info,
-                          ),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'Historial de pagos',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                            ),
+                          const SizedBox(height: 4),
+                          // Botones de acción
+                          Row(
+                            children: [
+                              if (widget.credito.saldoPendiente > 0) ...[
+                                Expanded(
+                                  child: _buildBotonAccion(
+                                    icon: Icons.payment,
+                                    label: 'Pago Completo',
+                                    color: AppColors.success,
+                                    onTap: () {
+                                      _mostrarDialogoPago(
+                                        context,
+                                        esParcial: false,
+                                      );
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: _buildBotonAccion(
+                                    icon: Icons.payment_outlined,
+                                    label: 'Pago Parcial',
+                                    color: Colors.orange,
+                                    onTap: () {
+                                      _mostrarDialogoPago(
+                                        context,
+                                        esParcial: true,
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ],
+                              if (widget.credito.saldoPendiente <= 0) ...[
+                                Expanded(
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.success.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.check_circle,
+                                          size: 16,
+                                          color: AppColors.success,
+                                        ),
+                                        SizedBox(width: 8),
+                                        Text(
+                                          'Crédito Pagado',
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.success,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                         ],
                       ),
-                      const SizedBox(height: 8),
-                      ...widget.credito.pagosRealizados.map((pago) {
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 4),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.grey.shade200),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.check_circle,
-                                size: 14,
-                                color: AppColors.success,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                '\$${pago.monto.toStringAsFixed(2)}',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                '${pago.fechaPagoReal?.day}/${pago.fechaPagoReal?.month}',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey.shade600,
-                                ),
-                              ),
-                              const Spacer(),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.info.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  pago.metodoPago ?? 'Efectivo',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: AppColors.info,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                      const SizedBox(height: 16),
-                    ],
-                    
-                    // Botones de acción
-                    Row(
-                      children: [
-                        if (widget.credito.saldoPendiente > 0) ...[
-                          Expanded(
-                            child: _buildBotonAccion(
-                              icon: Icons.payment,
-                              label: 'Pago Completo',
-                              color: AppColors.success,
-                              onTap: () {
-                                _mostrarDialogoPago(
-                                  context,
-                                  esParcial: false,
-                                );
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: _buildBotonAccion(
-                              icon: Icons.payment_outlined,
-                              label: 'Pago Parcial',
-                              color: Colors.orange,
-                              onTap: () {
-                                _mostrarDialogoPago(
-                                  context,
-                                  esParcial: true,
-                                );
-                              },
-                            ),
-                          ),
-                        ],
-                        if (widget.credito.saldoPendiente <= 0) ...[
-                          Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              decoration: BoxDecoration(
-                                color: AppColors.success.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.check_circle,
-                                    size: 16,
-                                    color: AppColors.success,
-                                  ),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    'Crédito Pagado',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.success,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
                     ),
                   ],
-                ),
-              ),
-            ],
+                )
+                : const SizedBox.shrink(),
+            ),
           ],
         ),
       ),

@@ -9,6 +9,8 @@ import 'package:cuot_app/theme/app_colors.dart';
 import 'package:cuot_app/widget/seguimiento/tarjeta_financiamiento.dart';
 import 'package:cuot_app/service/credit_service.dart';
 import 'package:cuot_app/widget/dashboard/custom_drawer.dart';
+import 'package:cuot_app/ui/pages/dashboard_screen.dart';
+import 'package:cuot_app/ui/pages/detalle_credito_page.dart';
 
 class SeguimientoCreditosPage extends StatefulWidget {
   final String nombreUsuario;
@@ -32,6 +34,9 @@ class _SeguimientoCreditosPageState extends State<SeguimientoCreditosPage> {
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
+      // 🛠️ REPARACIÓN: Limpiar duplicados antes de cargar
+      await _creditService.repairDuplicateCuotas(widget.nombreUsuario);
+
       // 🚀 OPTIMIZACIÓN: Una sola consulta para traer todo (N+1 fixed)
       final rawCredits =
           await _creditService.getFullCreditsData(widget.nombreUsuario);
@@ -86,6 +91,7 @@ class _SeguimientoCreditosPageState extends State<SeguimientoCreditosPage> {
                 (c['costo_inversion'] + c['margen_ganancia']).toDouble(),
             fechaLimite:
                 DateTime.parse(c['fecha_vencimiento'] ?? c['fecha_inicio']),
+            fechaInicio: c['fecha_inicio'] != null ? DateTime.parse(c['fecha_inicio']) : null,
             tipoPago: TipoPagoUnico.unico,
             descripcion: c['concepto'],
             pagosRealizados: pagos,
@@ -104,6 +110,7 @@ class _SeguimientoCreditosPageState extends State<SeguimientoCreditosPage> {
             'cuotas': cuotas,
             'pagos': pagos,
             'pagosParciales': <int, double>{},
+            'modalidadPago': _getModalidadName(c['modalidad_pago']),
           });
         }
       }
@@ -119,7 +126,20 @@ class _SeguimientoCreditosPageState extends State<SeguimientoCreditosPage> {
     }
   }
 
-  String _filtroEstado = 'todos';
+  String _getModalidadName(dynamic index) {
+    if (index == null) return 'No especificada';
+    final idx = index is int ? index : int.tryParse(index.toString()) ?? 0;
+    switch (idx) {
+      case 0: return 'Diario';
+      case 1: return 'Semanal';
+      case 2: return 'Quincenal';
+      case 3: return 'Mensual';
+      case 4: return 'Personalizado';
+      default: return 'Desconocido';
+    }
+  }
+
+  String _filtroEstado = 'atrasado';
   String _busqueda = '';
   final TextEditingController _searchController = TextEditingController();
 
@@ -201,7 +221,11 @@ class _SeguimientoCreditosPageState extends State<SeguimientoCreditosPage> {
 
       bool matchesEstado = true;
       if (_filtroEstado != 'todos') {
-        matchesEstado = estado == _filtroEstado.toLowerCase();
+        if (_filtroEstado == 'atrasado') {
+          matchesEstado = estado == 'atrasado' || estado == 'vencido';
+        } else {
+          matchesEstado = estado == _filtroEstado.toLowerCase();
+        }
       }
 
       return matchesBusqueda && matchesEstado;
@@ -222,6 +246,8 @@ class _SeguimientoCreditosPageState extends State<SeguimientoCreditosPage> {
         return AppColors.mediumGrey;
     }
   }
+
+
 
   double getMontoRestanteCuota(int financiamientoIndex, int numeroCuota) {
     final f = _financiamientos[financiamientoIndex];
@@ -353,10 +379,11 @@ class _SeguimientoCreditosPageState extends State<SeguimientoCreditosPage> {
         creditId: credito.id,
         numeroCuota: 1, // Créditos únicos siempre usan la cuota 1
         montoPagado: pago.monto,
-        fechaPago: pago.fechaPago,
+        fechaPago: pago.fechaPagoReal ?? DateTime.now(), // 👈 CORRECCIÓN: Usar la fecha REAL elegida
         metodoPago: pago.metodoPago ?? 'efectivo',
-        referencia: '',
-        esPagoParcial: pago.monto < credito.montoTotal, // Simplificación
+        referencia: pago.referencia ?? '',
+        observaciones: pago.observaciones ?? '',
+        esPagoParcial: pago.monto < credito.saldoPendiente, // Usar saldoPendiente para comparar
       );
 
       // 2. Refrescar datos
@@ -385,7 +412,7 @@ class _SeguimientoCreditosPageState extends State<SeguimientoCreditosPage> {
   }
 
   Widget _buildFiltros() {
-    final filtros = ['todos', 'al día', 'atrasado', 'pagado'];
+    final filtros = ['atrasado', 'al día', 'pagado', 'todos'];
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -395,12 +422,18 @@ class _SeguimientoCreditosPageState extends State<SeguimientoCreditosPage> {
           final isSelected = _filtroEstado == filtro;
           final color = _getColorParaFiltro(filtro);
 
+          String nombreFiltro = filtro;
+          if (filtro == 'todos') nombreFiltro = 'Todos';
+          else if (filtro == 'atrasado') nombreFiltro = 'Vencidos';
+          else if (filtro == 'al día') nombreFiltro = 'Al día';
+          else if (filtro == 'pagado') nombreFiltro = 'Pagados';
+
           return Padding(
             padding: const EdgeInsets.only(right: 8),
             child: FilterChip(
               selected: isSelected,
               label: Text(
-                filtro == 'todos' ? 'Todos' : filtro,
+                nombreFiltro,
                 style: TextStyle(
                   color: isSelected ? Colors.white : color,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
@@ -424,6 +457,72 @@ class _SeguimientoCreditosPageState extends State<SeguimientoCreditosPage> {
     );
   }
 
+  Future<void> _eliminarCredito(dynamic creditId, String nombreCliente) async {
+    final confirmado = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: AppColors.error, size: 28),
+            const SizedBox(width: 8),
+            const Text('Eliminar crédito'),
+          ],
+        ),
+        content: Text(
+          '¿Estás seguro de que deseas eliminar el crédito de $nombreCliente?\n\nEsta acción no se puede deshacer.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmado == true) {
+      try {
+        await _creditService.deleteCredit(creditId.toString());
+        await _loadData();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('✅ Crédito de $nombreCliente eliminado'),
+              backgroundColor: AppColors.success,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('❌ Error al eliminar: $e'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -433,7 +532,16 @@ class _SeguimientoCreditosPageState extends State<SeguimientoCreditosPage> {
         if (_scaffoldKey.currentState?.isDrawerOpen ?? false) {
           _scaffoldKey.currentState?.closeDrawer();
         } else {
-          Navigator.of(context).pop();
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+              builder: (_) => DashboardScreen(
+                correo: '',
+                userName: widget.nombreUsuario,
+              ),
+            ),
+            (route) => false,
+          );
         }
       },
       child: Scaffold(
@@ -443,7 +551,7 @@ class _SeguimientoCreditosPageState extends State<SeguimientoCreditosPage> {
           ventanaActiva: 'Cuotas Personales',
         ),
         appBar: AppBar(
-          title: const Text('Seguimiento de Créditos'),
+          title: const Text('Seguimiento de Cuotas'),
           backgroundColor: AppColors.primaryGreen,
           foregroundColor: Colors.white,
           elevation: 0,
@@ -512,102 +620,167 @@ class _SeguimientoCreditosPageState extends State<SeguimientoCreditosPage> {
                             ],
                           ),
                         )
-                      : ListView.builder(
-                          padding: const EdgeInsets.only(top: 8, bottom: 16),
-                          itemCount: _financiamientosFiltrados.length,
-                          itemBuilder: (context, index) {
-                            final item = _financiamientosFiltrados[index];
-                            final originalIndex =
-                                _financiamientos.indexOf(item);
+                      : RefreshIndicator(
+                          onRefresh: () => _loadData(),
+                          color: AppColors.primaryGreen,
+                          child: ListView.builder(
+                            padding: const EdgeInsets.only(top: 8, bottom: 80), // Padding extra abajo para que no tape el FAB
+                            physics: const AlwaysScrollableScrollPhysics(), // Necesario para RefreshIndicator cuando hay pocos elementos
+                            itemCount: _financiamientosFiltrados.length,
+                            itemBuilder: (context, index) {
+                              final item = _financiamientosFiltrados[index];
+                              final originalIndex = _financiamientos.indexOf(item);
 
-                            if (item is CreditoUnico) {
-                              return TarjetaCreditoUnico(
-                                credito: item,
-                                onPagoRealizado: (pago) =>
-                                    _pagarCreditoUnico(item, pago),
-                                onVerDetalle: () {
-                                  // Navegar a detalle del crédito único
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                          'Ver detalle de ${item.nombreCliente}'),
-                                      backgroundColor: AppColors.info,
-                                    ),
-                                  );
-                                },
-                              );
-                            } else if (item is Map<String, dynamic>) {
-                              final totalCuotas = item['cuotas'].length;
-                              final cuotasPagadas = item['pagos'].length;
-                              final cuotasVencidas =
-                                  getCuotasVencidas(originalIndex);
+                              if (item is CreditoUnico) {
+                                return TarjetaCreditoUnico(
+                                  credito: item,
+                                  onPagoRealizado: (pago) =>
+                                      _pagarCreditoUnico(item, pago),
+                                  onEditar: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => CreditoPage(
+                                          nombreUsuario: widget.nombreUsuario,
+                                          creditoIdEditar: item.id.toString(),
+                                        ),
+                                      ),
+                                    ).then((_) => _loadData());
+                                  },
+                                  onEliminar: () => _eliminarCredito(
+                                    item.id,
+                                    item.nombreCliente,
+                                  ),
+                                  onVerDetalle: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => DetalleCreditoPage(
+                                          creditoId: item.id.toString(),
+                                          nombreUsuario: widget.nombreUsuario,
+                                          onEditar: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (_) => CreditoPage(
+                                                  nombreUsuario: widget.nombreUsuario,
+                                                  creditoIdEditar: item.id.toString(),
+                                                ),
+                                              ),
+                                            ).then((_) => _loadData());
+                                          },
+                                          onEliminar: () => _eliminarCredito(
+                                            item.id,
+                                            item.nombreCliente,
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                );
+                              } else if (item is Map<String, dynamic>) {
+                                final totalCuotas = item['cuotas'].length;
+                                final cuotasPagadas = item['pagos'].length;
+                                final cuotasVencidas =
+                                    getCuotasVencidas(originalIndex);
 
-                              return TarjetaFinanciamiento(
-                                nombreCliente: item['nombre'],
-                                telefono: item['telefono'],
-                                estado: item['estado'] ?? 'Pendiente',
-                                montoCuota: item['montoCuota'],
-                                totalPagado: item['totalPagado'],
-                                totalPendiente: item['totalPendiente'] ??
-                                    (item['totalCredito'] -
-                                        item['totalPagado']),
-                                progreso: item['progreso'] ??
-                                    (item['totalPagado'] /
-                                        item['totalCredito']),
-                                cuotas: item['cuotas'],
-                                pagos: item['pagos'],
-                                cuotasVencidas: cuotasVencidas,
-                                concepto: item['concepto'] ?? 'Sin concepto',
-                                totalCredito: item['totalCredito'] ?? 0.0,
-                                onCuotaTap: (numeroCuota) {
-                                  final cuota =
-                                      (item['cuotas'] as List).firstWhere(
-                                    (c) => c.numeroCuota == numeroCuota,
-                                  );
+                                return TarjetaFinanciamiento(
+                                  creditoId: item['id']?.toString(),
+                                  nombreCliente: item['nombre'],
+                                  modalidadPago: item['modalidadPago'] ?? 'En Cuotas',
+                                  telefono: item['telefono'],
+                                  estado: item['estado'] ?? 'Pendiente',
+                                  montoCuota: item['montoCuota'],
+                                  totalPagado: item['totalPagado'],
+                                  totalPendiente: item['totalPendiente'] ??
+                                      (item['totalCredito'] -
+                                          item['totalPagado']),
+                                  progreso: item['progreso'] ??
+                                      (item['totalPagado'] /
+                                          item['totalCredito']),
+                                  cuotas: item['cuotas'],
+                                  pagos: item['pagos'],
+                                  cuotasVencidas: cuotasVencidas,
+                                  concepto: item['concepto'] ?? 'Sin concepto',
+                                  totalCredito: item['totalCredito'] ?? 0.0,
+                                  onVerDetalle: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => DetalleCreditoPage(
+                                          creditoId: item['id'].toString(),
+                                          nombreUsuario: widget.nombreUsuario,
+                                          onEditar: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (_) => CreditoPage(
+                                                  nombreUsuario: widget.nombreUsuario,
+                                                  creditoIdEditar: item['id'].toString(),
+                                                ),
+                                              ),
+                                            ).then((_) => _loadData());
+                                          },
+                                          onEliminar: () => _eliminarCredito(
+                                            item['id'],
+                                            item['nombre'],
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  onEditar: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => CreditoPage(
+                                          nombreUsuario: widget.nombreUsuario,
+                                          creditoIdEditar: item['id'].toString(),
+                                        ),
+                                      ),
+                                    ).then((_) => _loadData());
+                                  },
+                                  onEliminar: () => _eliminarCredito(
+                                    item['id'],
+                                    item['nombre'],
+                                  ),
+                                  onCuotaTap: (numeroCuota) {
+                                    final cuota =
+                                        (item['cuotas'] as List).firstWhere(
+                                      (c) => c.numeroCuota == numeroCuota,
+                                    );
 
-                                  final montoRestante = getMontoRestanteCuota(
-                                    originalIndex,
-                                    numeroCuota,
-                                  );
+                                    final montoRestante = getMontoRestanteCuota(
+                                      originalIndex,
+                                      numeroCuota,
+                                    );
 
-                                  if (montoRestante <= 0) return;
+                                    if (montoRestante <= 0) return;
 
-                                  final esPagoParcialPrevio =
-                                      esCuotaParcialmentePagada(
-                                    originalIndex,
-                                    numeroCuota,
-                                  );
+                                    final esPagoParcialPrevio =
+                                        esCuotaParcialmentePagada(
+                                      originalIndex,
+                                      numeroCuota,
+                                    );
 
-                                  showDialog(
-                                    context: context,
-                                    builder: (context) =>
-                                        DialogoPagoCuotaCompleto(
-                                      numeroCuota: numeroCuota,
-                                      monto: cuota.monto,
-                                      montoRestante: montoRestante,
-                                      fechaVencimiento: cuota.fechaPago,
-                                      nombreCliente: item['nombre'],
-                                      concepto: item['concepto'] ?? 'Préstamo',
-                                      montoPagadoHastaAhora:
-                                          item['totalPagado'],
-                                      totalCredito:
-                                          item['totalCredito'] ?? 500.00,
-                                      totalCuotas: totalCuotas,
-                                      cuotasPagadas: cuotasPagadas,
-                                      esPagoParcial: esPagoParcialPrevio,
-                                      onPagar: (
-                                        monto,
-                                        fechaPago,
-                                        metodoPago,
-                                        referencia,
-                                        observaciones,
-                                        aplicarMora,
-                                        montoMora,
-                                        esPagoParcial,
-                                      ) {
-                                        _pagarCuotaCompleto(
-                                          originalIndex,
-                                          numeroCuota,
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) =>
+                                          DialogoPagoCuotaCompleto(
+                                        numeroCuota: numeroCuota,
+                                        monto: cuota.monto,
+                                        montoRestante: montoRestante,
+                                        fechaVencimiento: cuota.fechaPago,
+                                        nombreCliente: item['nombre'],
+                                        concepto: item['concepto'] ?? 'Préstamo',
+                                        montoPagadoHastaAhora:
+                                            item['totalPagado'],
+                                        totalCredito:
+                                            item['totalCredito'] ?? 500.00,
+                                        totalCuotas: totalCuotas,
+                                        cuotasPagadas: cuotasPagadas,
+                                        esPagoParcial: esPagoParcialPrevio,
+                                        onPagar: (
                                           monto,
                                           fechaPago,
                                           metodoPago,
@@ -616,15 +789,28 @@ class _SeguimientoCreditosPageState extends State<SeguimientoCreditosPage> {
                                           aplicarMora,
                                           montoMora,
                                           esPagoParcial,
-                                        );
-                                      },
-                                    ),
-                                  );
-                                },
-                              );
-                            }
-                            return const SizedBox.shrink();
-                          },
+                                        ) {
+                                          _pagarCuotaCompleto(
+                                            originalIndex,
+                                            numeroCuota,
+                                            monto,
+                                            fechaPago,
+                                            metodoPago,
+                                            referencia,
+                                            observaciones,
+                                            aplicarMora,
+                                            montoMora,
+                                            esPagoParcial,
+                                          );
+                                        },
+                                      ),
+                                    );
+                                  },
+                                );
+                              }
+                              return const SizedBox.shrink();
+                            },
+                          ),
                         ),
             ),
           ],
@@ -636,7 +822,7 @@ class _SeguimientoCreditosPageState extends State<SeguimientoCreditosPage> {
               MaterialPageRoute(
                   builder: (_) =>
                       CreditoPage(nombreUsuario: widget.nombreUsuario)),
-            );
+            ).then((_) => _loadData());
           },
           tooltip: 'Nuevo crédito',
           child: const Icon(Icons.add),

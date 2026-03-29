@@ -1,0 +1,19 @@
+Analyzing detalle_credito_page.dart, credit_service.dart...
+
+warning - cuot_app\lib\ui\pages\detalle_credito_page.dart:120:11 - The value of the local variable 'cliente' isn't used. Try removing the variable or using it. - unused_local_variable
+warning - cuot_app\lib\ui\pages\detalle_credito_page.dart:486:45 - The left operand can't be null, so the right operand is never executed. Try removing the operator and the right operand. - dead_null_aware_expression
+warning - cuot_app\lib\ui\pages\detalle_credito_page.dart:593:16 - The declaration '_formatCondiciones' isn't referenced. Try removing the declaration of '_formatCondiciones'. - unused_element
+warning - cuot_app\lib\ui\pages\detalle_credito_page.dart:853:62 - The left operand can't be null, so the right operand is never executed. Try removing the operator and the right operand. - dead_null_aware_expression
+warning - cuot_app\lib\ui\pages\detalle_credito_page.dart:896:63 - The left operand can't be null, so the right operand is never executed. Try removing the operator and the right operand. - dead_null_aware_expression
+warning - cuot_app\lib\ui\pages\detalle_credito_page.dart:918:51 - The left operand can't be null, so the right operand is never executed. Try removing the operator and the right operand. - dead_null_aware_expression
+   info - cuot_app\lib\ui\pages\detalle_credito_page.dart:267:65 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - cuot_app\lib\ui\pages\detalle_credito_page.dart:285:63 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - cuot_app\lib\ui\pages\detalle_credito_page.dart:285:100 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - cuot_app\lib\ui\pages\detalle_credito_page.dart:373:70 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - cuot_app\lib\ui\pages\detalle_credito_page.dart:378:80 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - cuot_app\lib\ui\pages\detalle_credito_page.dart:378:117 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - cuot_app\lib\ui\pages\detalle_credito_page.dart:437:71 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - cuot_app\lib\ui\pages\detalle_credito_page.dart:507:54 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - cuot_app\lib\ui\pages\detalle_credito_page.dart:914:48 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+
+15 issues found.

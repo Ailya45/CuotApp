@@ -4,6 +4,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'core/supabase/supabase_config.dart';
 import 'ui/pages/cuotapp_login_page.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 Future<void> main() async {
   // Asegurar bindings de Flutter
@@ -11,7 +12,7 @@ Future<void> main() async {
 
   await initializeDateFormatting('es', null);
   Intl.defaultLocale = 'es';
-  
+
   // Iniciar la app con un loader
   runApp(const MyApp());
 }
@@ -36,10 +37,10 @@ class _MyAppState extends State<MyApp> {
   Future<void> _initialize() async {
     try {
       await dotenv.load(fileName: ".env");
-     
+
       // Inicializar Supabase
       await SupabaseConfig.initialize();
-  
+
       if (mounted) {
         setState(() {
           _isInitialized = true;
@@ -60,12 +61,21 @@ class _MyAppState extends State<MyApp> {
     if (!_isInitialized && _errorMessage == null) {
       return MaterialApp(
         debugShowCheckedModeBanner: false,
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [
+          Locale('es', 'ES'),
+          Locale('en', 'US'),
+        ],
         builder: (context, child) {
           final mediaQueryData = MediaQuery.of(context);
           return MediaQuery(
             data: mediaQueryData.copyWith(
               textScaler: mediaQueryData.textScaler.clamp(
-                minScaleFactor: 1.0, 
+                minScaleFactor: 1.0,
                 maxScaleFactor: 1.15,
               ),
             ),
@@ -91,12 +101,21 @@ class _MyAppState extends State<MyApp> {
     if (_errorMessage != null) {
       return MaterialApp(
         debugShowCheckedModeBanner: false,
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [
+          Locale('es', 'ES'),
+          Locale('en', 'US'),
+        ],
         builder: (context, child) {
           final mediaQueryData = MediaQuery.of(context);
           return MediaQuery(
             data: mediaQueryData.copyWith(
               textScaler: mediaQueryData.textScaler.clamp(
-                minScaleFactor: 1.0, 
+                minScaleFactor: 1.0,
                 maxScaleFactor: 1.15,
               ),
             ),
@@ -162,24 +181,33 @@ class CuotApp extends StatelessWidget {
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('es', 'ES'),
+        Locale('en', 'US'),
+      ],
       title: 'CuotApp',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: kPrimaryGreen),
         useMaterial3: true,
         fontFamily: 'Roboto',
       ),
-      builder: (context, child) {
+      /*builder: (context, child) {
         final mediaQueryData = MediaQuery.of(context);
         return MediaQuery(
           data: mediaQueryData.copyWith(
             textScaler: mediaQueryData.textScaler.clamp(
-              minScaleFactor: 1.0, 
+              minScaleFactor: 1.0,
               maxScaleFactor: 1.15,
             ),
           ),
           child: child!,
         );
-      },
+      },*/
       home: const CuotAppLoginPage(),
     );
   }

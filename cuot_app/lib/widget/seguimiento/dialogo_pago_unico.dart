@@ -4,6 +4,7 @@ import 'package:cuot_app/utils/scrapper_util.dart'; // 👈 NUEVO: Scrapper
 import 'package:cuot_app/Model/credito_unico_model.dart';
 import 'package:cuot_app/Model/pago_model.dart';
 import 'package:cuot_app/theme/app_colors.dart';
+import 'package:cuot_app/widget/creditos/custom_date_picker.dart';
 
 class DialogoPagoUnico extends StatefulWidget {
   final CreditoUnico credito;
@@ -127,11 +128,11 @@ class _DialogoPagoUnicoState extends State<DialogoPagoUnico>
                 ],
               ),
             ),
-            child: Column(
+            child: Stack(
               children: [
-                // Header ya no tiene barra azul/decorativa (ELIMINADO)
-              
-              Expanded(
+                Column(
+                  children: [
+                    Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(20),
                   child: Column(
@@ -334,57 +335,14 @@ class _DialogoPagoUnicoState extends State<DialogoPagoUnico>
                       const SizedBox(height: 16),
                       
                       // 3. Fecha de pago
-                      InkWell(
-                        onTap: () async {
-                          final date = await showDatePicker(
-                            context: context,
-                            initialDate: _fechaPago,
-                            firstDate: DateTime.now().subtract(
-                              const Duration(days: 30),
-                            ),
-                            lastDate: DateTime.now().add(
-                              const Duration(days: 30),
-                            ),
-                          );
-                          if (date != null) {
-                            setState(() {
-                              _fechaPago = date;
-                            });
-                          }
+                      CustomDatePicker(
+                        selectedDate: _fechaPago,
+                        onDateSelected: (date) {
+                          setState(() {
+                            _fechaPago = date;
+                          });
                         },
-                        child: Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade50,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.grey.shade300),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.calendar_today,
-                                color: AppColors.primaryGreen,
-                              ),
-                              const SizedBox(width: 12),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Fecha de pago',
-                                    style: TextStyle(fontSize: 11),
-                                  ),
-                                  Text(
-                                    '${_fechaPago.day}/${_fechaPago.month}/${_fechaPago.year}',
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
+                        label: 'Fecha de pago',
                       ),
                       
                       const SizedBox(height: 16),
@@ -611,13 +569,23 @@ class _DialogoPagoUnicoState extends State<DialogoPagoUnico>
                           ),
                         ],
                       ),
-                    ],
+                    ], // Fin Inner Column children
+                  ), // Fin Inner Column
+                ), // Fin SingleChildScrollView
+              ), // Fin Expanded
+            ], // Fin Main Column children
+          ), // Fin Main Column,
+                Positioned(
+                  top: 10,
+                  left: 10,
+                  child: IconButton(
+                    icon: const Icon(Icons.close, color: AppColors.mediumGrey),
+                    onPressed: () => Navigator.of(context).pop(),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
       ),
     ),
   );
@@ -685,6 +653,16 @@ class _DialogoPagoUnicoState extends State<DialogoPagoUnico>
     );
   }
 
+  DateTime _combinarFechaConHoraActual(DateTime date) {
+    final now = DateTime.now();
+    // Si la fecha elegida es HOY, usamos el 'now' completo para tener la hora exacta del momento.
+    if (date.year == now.year && date.month == now.month && date.day == now.day) {
+      return now;
+    }
+    // Si es otra fecha, la dejamos como está (probablemente 00:00:00 del picker)
+    return date;
+  }
+
   void _confirmarPago() {
     final monto = double.tryParse(_montoController.text) ?? 0;
     
@@ -698,7 +676,7 @@ class _DialogoPagoUnicoState extends State<DialogoPagoUnico>
       return;
     }
     
-    if (monto > _maxMonto) {
+    if (monto > _maxMonto + 0.01) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('El monto no puede exceder el saldo pendiente'),
@@ -714,9 +692,11 @@ class _DialogoPagoUnicoState extends State<DialogoPagoUnico>
       numeroCuota: 1,
       fechaPago: widget.credito.fechaLimite,
       monto: monto,
-      fechaPagoReal: _fechaPago,
+      fechaPagoReal: _combinarFechaConHoraActual(_fechaPago),
       estado: 'pagado',
       metodoPago: _metodoPago,
+      referencia: _referenciaController.text,
+      observaciones: _observacionesController.text,
     );
 
     widget.onPagoRealizado(nuevoPago);

@@ -8,6 +8,8 @@ class Pago {
   final DateTime? fechaPagoReal;
   final String estado; // 'pendiente', 'pagado', 'atrasado'
   final String? metodoPago; // 'efectivo', 'transferencia', 'tarjeta'
+  final String? referencia; // 👈 NUEVO
+  final String? observaciones; // 👈 NUEVO
 
   Pago({
     required this.id,
@@ -18,6 +20,8 @@ class Pago {
     this.fechaPagoReal,
     this.estado = 'pendiente',
     this.metodoPago,
+    this.referencia,
+    this.observaciones,
   });
 
   Map<String, dynamic> toJson() {
@@ -30,6 +34,8 @@ class Pago {
       'fechaPagoReal': fechaPagoReal?.toIso8601String(),
       'estado': estado,
       'metodoPago': metodoPago,
+      'referencia': referencia,
+      'observaciones': observaciones,
     };
   }
 
@@ -45,6 +51,8 @@ class Pago {
           : null,
       estado: json['estado'] ?? 'pendiente',
       metodoPago: json['metodoPago'],
+      referencia: json['referencia'],
+      observaciones: json['observaciones'],
     );
   }
 
@@ -57,6 +65,8 @@ class Pago {
     DateTime? fechaPagoReal,
     String? estado,
     String? metodoPago,
+    String? referencia,
+    String? observaciones,
   }) {
     return Pago(
       id: id ?? this.id,
@@ -67,6 +77,8 @@ class Pago {
       fechaPagoReal: fechaPagoReal ?? this.fechaPagoReal,
       estado: estado ?? this.estado,
       metodoPago: metodoPago ?? this.metodoPago,
+      referencia: referencia ?? this.referencia,
+      observaciones: observaciones ?? this.observaciones,
     );
   }
 

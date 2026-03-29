@@ -150,7 +150,7 @@ class _TarjetaCuotaCompactaState extends State<TarjetaCuotaCompacta> {
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  Icons.calendar_today,
+                  widget.cuota.bloqueada ? Icons.lock_clock : Icons.calendar_today,
                   size: 14,
                   color: widget.fueModificada
                       ? Colors.white70
@@ -191,7 +191,7 @@ class _TarjetaCuotaCompactaState extends State<TarjetaCuotaCompacta> {
                   ),
                 ),
                 child: Text(
-                  '\$${widget.cuota.monto.toStringAsFixed(0)}',
+                  '\$${widget.cuota.monto.toStringAsFixed(2)}',
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,

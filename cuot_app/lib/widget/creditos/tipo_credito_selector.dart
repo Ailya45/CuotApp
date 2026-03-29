@@ -15,7 +15,7 @@ class TipoCreditoSelector extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            '¿Qué tipo de financiamiento deseas crear?',
+            '¿Qué tipo de cuota deseas crear?',
             style: Theme.of(context).textTheme.headlineSmall,
             textAlign: TextAlign.center,
           ),
@@ -23,16 +23,16 @@ class TipoCreditoSelector extends StatelessWidget {
           _buildOpcionCredito(
             context,
             tipo: TipoCredito.unPago,
-            titulo: 'Pago Simple',
-            descripcion: 'Un solo pago en fecha específica',
+            titulo: 'Cuota simple',
+            descripcion: 'paga dentro de un tiempo determinado',
             icono: Icons.payments,
           ),          
           SizedBox(height: 16),
           _buildOpcionCredito(
             context,
             tipo: TipoCredito.cuotas,
-            titulo: 'Pago en cuotas',
-            descripcion: 'Pagos periódicos en varias fechas',
+            titulo: 'Cuotas fijas',
+            descripcion: 'Pagos periódicos en fechas determinadas',
             icono: Icons.calendar_month,
           ),
         ],
