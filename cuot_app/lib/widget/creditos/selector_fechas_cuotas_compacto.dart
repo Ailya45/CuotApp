@@ -7,8 +7,9 @@ class SelectorFechasCuotasCompacto extends StatefulWidget {
   final int numeroCuotas;
   final DateTime fechaInicio;
   final double montoPorCuota;
-  final double precioTotalEsperado; // 👈 NUEVO: precio total esperado
-  final List<CuotaPersonalizada>? initialCuotas; // 👈 NUEVO: cuotas ya existentes
+  final double precioTotalEsperado; // 👈 precio total esperado
+  final double? saldoPendienteEsperado; // 👈 NUEVO: saldo pendiente real esperado
+  final List<CuotaPersonalizada>? initialCuotas; // 👈 cuotas ya existentes
   final Function(List<CuotaPersonalizada>) onFechasSeleccionadas;
 
   const SelectorFechasCuotasCompacto({
@@ -16,7 +17,8 @@ class SelectorFechasCuotasCompacto extends StatefulWidget {
     required this.numeroCuotas,
     required this.fechaInicio,
     required this.montoPorCuota,
-    required this.precioTotalEsperado, // 👈 NUEVO
+    required this.precioTotalEsperado,
+    this.saldoPendienteEsperado,
     this.initialCuotas,
     required this.onFechasSeleccionadas,
   });
@@ -31,15 +33,15 @@ class _SelectorFechasCuotasCompactoState extends State<SelectorFechasCuotasCompa
   final ScrollController _scrollController = ScrollController();
 
   // 👇 NUEVAS PROPIEDADES PARA VALIDACIÓN
-  double get _totalCuotas => CuotaPersonalizada.calcularTotalCuotas(_cuotas);
-  double get _diferencia => CuotaPersonalizada.obtenerDiferenciaTotal(
-    _cuotas, 
-    widget.precioTotalEsperado
-  );
-  bool get _totalValido => CuotaPersonalizada.validarTotalCuotas(
-    _cuotas, 
-    widget.precioTotalEsperado
-  );
+  double get _totalCuotasValidadas => widget.saldoPendienteEsperado != null
+      ? _cuotas.where((c) => !c.pagada && !c.bloqueada).fold(0.0, (sum, c) => sum + c.monto)
+      : CuotaPersonalizada.calcularTotalCuotas(_cuotas);
+
+  double get _targetEsperado => widget.saldoPendienteEsperado ?? widget.precioTotalEsperado;
+
+  double get _diferencia => _totalCuotasValidadas - _targetEsperado;
+
+  bool get _totalValido => (_diferencia).abs() <= 0.01;
 
   @override
   void initState() {
@@ -139,14 +141,19 @@ class _SelectorFechasCuotasCompactoState extends State<SelectorFechasCuotasCompa
       final diferencia = _diferencia;
       if (diferencia.abs() < 0.01) return; // Ya está balanceado
       
-      // Distribuir la diferencia entre todas las cuotas
-      final ajustePorCuota = diferencia / _cuotas.length;
+      // Distribuir la diferencia entre las cuotas editables (no pagadas ni bloqueadas)
+      final editables = _cuotas.where((c) => !c.pagada && !c.bloqueada).toList();
+      if (editables.isEmpty) return;
+
+      final ajustePorCuota = diferencia / editables.length;
       
       for (int i = 0; i < _cuotas.length; i++) {
-        _cuotas[i] = _cuotas[i].copyWith(
-          monto: _cuotas[i].monto - ajustePorCuota, // Restar porque diferencia puede ser positiva o negativa
-        );
-        _cuotasModificadas[i] = true;
+        if (!_cuotas[i].pagada && !_cuotas[i].bloqueada) {
+          _cuotas[i] = _cuotas[i].copyWith(
+            monto: _cuotas[i].monto - ajustePorCuota,
+          );
+          _cuotasModificadas[i] = true;
+        }
       }
     });
     widget.onFechasSeleccionadas(_cuotas);
@@ -194,8 +201,11 @@ class _SelectorFechasCuotasCompactoState extends State<SelectorFechasCuotasCompa
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Total: \$${_totalCuotas.toStringAsFixed(2)} / '
-                      '\$${widget.precioTotalEsperado.toStringAsFixed(2)}',
+                      widget.saldoPendienteEsperado != null
+                        ? 'Pendiente config: \$${_totalCuotasValidadas.toStringAsFixed(2)} / '
+                          '\$${widget.saldoPendienteEsperado!.toStringAsFixed(2)}'
+                        : 'Total: \$${_totalCuotasValidadas.toStringAsFixed(2)} / '
+                          '\$${widget.precioTotalEsperado.toStringAsFixed(2)}',
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
